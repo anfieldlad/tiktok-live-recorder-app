@@ -325,13 +325,8 @@
           <h2>Record</h2>
           <form id="recording-form">
             <div class="field">
-              <label for="username">TikTok username</label>
-              <input id="username" name="username" type="text" placeholder="example_creator">
-            </div>
-
-            <div class="field">
-              <label for="url">Or TikTok live URL</label>
-              <input id="url" name="url" type="url" placeholder="https://www.tiktok.com/@user/live">
+              <label for="source">TikTok username or live URL</label>
+              <input id="source" name="source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
             </div>
 
             <div class="field">
@@ -344,7 +339,7 @@
               <button class="secondary" type="button" id="clear-form">Clear</button>
             </div>
           </form>
-          <div id="form-notice" class="notice">Enter a username or live URL, then click Record. If the account is offline, private, or invalid, you'll see the reason here.</div>
+          <div id="form-notice" class="notice">Enter a TikTok username or live URL, then click Record. The app will detect the input automatically.</div>
         </article>
 
         <article class="panel">
@@ -547,12 +542,18 @@
     }
 
     function buildRecordingPayload() {
-      const username = document.getElementById("username").value.trim();
-      const url = document.getElementById("url").value.trim();
+      const source = document.getElementById("source").value.trim();
       const duration = document.getElementById("duration").value.trim();
       const payload = {};
-      if (username) payload.username = username;
-      if (url) payload.url = url;
+      if (source) {
+        const normalized = source.replace(/^@+/, "").trim();
+        const isUrl = /^https?:\/\//i.test(source) || source.includes("tiktok.com/");
+        if (isUrl) {
+          payload.url = source;
+        } else {
+          payload.username = normalized;
+        }
+      }
       if (duration) payload.duration = Number(duration);
       return payload;
     }
