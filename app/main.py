@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.auth import router as auth_router
 from app.api.recordings import router as recordings_router
+from app.api.recordings import watch_router
 from app.services.browser_login_service import BrowserLoginService
 from app.services.config import get_settings
 from app.services.cookie_service import CookieService
@@ -15,6 +16,8 @@ from app.services.file_service import FileService
 from app.services.job_store import JobStore
 from app.services.live_status_service import LiveStatusService
 from app.services.recorder_service import RecorderService
+from app.services.watch_service import WatchService
+from app.services.watch_store import WatchStore
 
 
 def configure_logging() -> None:
@@ -28,11 +31,19 @@ def create_app() -> FastAPI:
     configure_logging()
     settings = get_settings()
     job_store = JobStore(settings.jobs_file)
+    watch_store = WatchStore(settings.watch_jobs_file)
     file_service = FileService(settings.output_dir, job_store)
     cookie_service = CookieService(settings.recorder_cookies_file)
     browser_login_service = BrowserLoginService(settings.jobs_file.parents[1], cookie_service)
     live_status_service = LiveStatusService(settings)
     recorder_service = RecorderService(settings, job_store, file_service)
+    watch_service = WatchService(
+        watch_store,
+        job_store,
+        live_status_service,
+        recorder_service,
+        settings.watch_poll_interval_seconds,
+    )
     templates = Jinja2Templates(directory=str(settings.jobs_file.parents[1] / "app" / "templates"))
 
     app = FastAPI(
@@ -43,25 +54,30 @@ def create_app() -> FastAPI:
 
     app.state.settings = settings
     app.state.job_store = job_store
+    app.state.watch_store = watch_store
     app.state.file_service = file_service
     app.state.cookie_service = cookie_service
     app.state.browser_login_service = browser_login_service
     app.state.live_status_service = live_status_service
     app.state.recorder_service = recorder_service
+    app.state.watch_service = watch_service
     app.state.templates = templates
 
     app.include_router(auth_router)
     app.include_router(recordings_router)
+    app.include_router(watch_router)
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
         jobs = [job.model_dump(mode="json") for job in job_store.list_jobs()]
+        watch_jobs = [job.model_dump(mode="json") for job in watch_store.list_jobs()]
         return templates.TemplateResponse(
             request,
             "index.html",
             {
                 "request": request,
                 "jobs": jobs,
+                "watch_jobs": watch_jobs,
                 "settings": settings,
                 "cookies_configured": cookie_service.is_configured(),
                 "browser_login_status": browser_login_service.status(),

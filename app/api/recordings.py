@@ -10,10 +10,13 @@ from app.models.recording import (
     RecordingCreateRequest,
     RecordingCreateResponse,
     RecordingJobResponse,
+    WatchCreateRequest,
+    WatchJobResponse,
 )
 
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
+watch_router = APIRouter(prefix="/watch-recordings", tags=["watch-recordings"])
 
 
 @router.post("", response_model=RecordingCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -101,3 +104,40 @@ def delete_recording(request: Request, job_id: str) -> RecordingActionResponse:
 
     recorder_service.delete_job(job_id)
     return RecordingActionResponse(id=job.id, status=job.status, file_path=job.file_path, error=job.error)
+
+
+@watch_router.post("", response_model=WatchJobResponse, status_code=status.HTTP_201_CREATED)
+def create_watch_recording(request: Request, payload: WatchCreateRequest) -> WatchJobResponse:
+    watch_service = request.app.state.watch_service
+    try:
+        job = watch_service.create_watch(payload)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return WatchJobResponse.from_job(job)
+
+
+@watch_router.get("", response_model=list[WatchJobResponse])
+def list_watch_recordings(request: Request) -> list[WatchJobResponse]:
+    watch_store = request.app.state.watch_store
+    return [WatchJobResponse.from_job(job) for job in watch_store.list_jobs()]
+
+
+@watch_router.post("/{watch_id}/stop", response_model=WatchJobResponse)
+def stop_watch_recording(request: Request, watch_id: str) -> WatchJobResponse:
+    watch_service = request.app.state.watch_service
+    try:
+        job = watch_service.stop_watch(watch_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="watch job not found") from exc
+    return WatchJobResponse.from_job(job)
+
+
+@watch_router.delete("/{watch_id}", response_model=WatchJobResponse)
+def delete_watch_recording(request: Request, watch_id: str) -> WatchJobResponse:
+    watch_store = request.app.state.watch_store
+    watch_service = request.app.state.watch_service
+    job = watch_store.get_job(watch_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="watch job not found")
+    watch_service.delete_watch(watch_id)
+    return WatchJobResponse.from_job(job)

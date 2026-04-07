@@ -21,6 +21,15 @@ class RecordingStatus(str, Enum):
     stopped = "stopped"
 
 
+class RecordingProgress(str, Enum):
+    preparing = "preparing"
+    recording = "recording"
+    finalizing = "finalizing"
+    ready = "ready"
+    failed = "failed"
+    stopped = "stopped"
+
+
 class RecordingCreateRequest(BaseModel):
     username: Optional[str] = Field(default=None, max_length=64)
     url: Optional[HttpUrl] = None
@@ -59,6 +68,8 @@ class RecordingJob(BaseModel):
     file_path: Optional[str] = None
     pid: Optional[int] = None
     error: Optional[str] = None
+    progress: RecordingProgress = RecordingProgress.preparing
+    progress_message: str = "Preparing the recorder."
     created_at: datetime = Field(default_factory=utc_now)
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
@@ -81,8 +92,11 @@ class RecordingJobResponse(BaseModel):
     duration: Optional[int]
     file_path: Optional[str]
     file_name: Optional[str]
+    file_size_bytes: Optional[int]
     pid: Optional[int]
     error: Optional[str]
+    progress: RecordingProgress
+    progress_message: str
     created_at: datetime
     started_at: Optional[datetime]
     finished_at: Optional[datetime]
@@ -97,8 +111,11 @@ class RecordingJobResponse(BaseModel):
             duration=job.duration,
             file_path=job.file_path,
             file_name=job.file_name,
+            file_size_bytes=Path(job.file_path).stat().st_size if job.file_path and Path(job.file_path).exists() else None,
             pid=job.pid,
             error=job.error,
+            progress=job.progress,
+            progress_message=job.progress_message,
             created_at=job.created_at,
             started_at=job.started_at,
             finished_at=job.finished_at,
@@ -115,6 +132,68 @@ class RecordingActionResponse(BaseModel):
     status: RecordingStatus
     file_path: Optional[str] = None
     error: Optional[str] = None
+
+
+class WatchStatus(str, Enum):
+    watching = "watching"
+    recording = "recording"
+    completed = "completed"
+    failed = "failed"
+    stopped = "stopped"
+
+
+class WatchCreateRequest(BaseModel):
+    username: Optional[str] = Field(default=None, max_length=64)
+    url: Optional[HttpUrl] = None
+    duration: Optional[int] = Field(default=None, ge=1)
+
+    @field_validator("username")
+    @classmethod
+    def normalize_watch_username(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().lstrip("@")
+        if not normalized:
+            return None
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_watch_source(self) -> "WatchCreateRequest":
+        if not self.username and not self.url:
+            raise ValueError("either username or url must be provided")
+        if self.username and self.url:
+            raise ValueError("provide either username or url, not both")
+        return self
+
+
+class WatchJob(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    username: Optional[str] = None
+    url: Optional[str] = None
+    duration: Optional[int] = None
+    status: WatchStatus = WatchStatus.watching
+    linked_recording_job_id: Optional[str] = None
+    last_checked_at: Optional[datetime] = None
+    last_message: str = "Waiting for the account to go live."
+    created_at: datetime = Field(default_factory=utc_now)
+    finished_at: Optional[datetime] = None
+
+
+class WatchJobResponse(BaseModel):
+    id: str
+    username: Optional[str]
+    url: Optional[str]
+    duration: Optional[int]
+    status: WatchStatus
+    linked_recording_job_id: Optional[str]
+    last_checked_at: Optional[datetime]
+    last_message: str
+    created_at: datetime
+    finished_at: Optional[datetime]
+
+    @classmethod
+    def from_job(cls, job: WatchJob) -> "WatchJobResponse":
+        return cls(**job.model_dump(mode="json"))
 
 
 class LiveStatusResponse(BaseModel):

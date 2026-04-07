@@ -7,7 +7,13 @@ import subprocess
 import threading
 from pathlib import Path
 
-from app.models.recording import RecordingCreateRequest, RecordingJob, RecordingStatus, utc_now
+from app.models.recording import (
+    RecordingCreateRequest,
+    RecordingJob,
+    RecordingProgress,
+    RecordingStatus,
+    utc_now,
+)
 from app.services.config import Settings
 from app.services.file_service import FileService
 from app.services.job_store import JobStore
@@ -34,6 +40,8 @@ class RecorderService:
             url=str(payload.url) if payload.url else None,
             duration=payload.duration,
             status=RecordingStatus.queued,
+            progress=RecordingProgress.preparing,
+            progress_message="Preparing the recorder.",
         )
         self.job_store.save_job(job)
 
@@ -52,7 +60,13 @@ class RecorderService:
 
         self.job_store.update_job(
             job_id,
-            lambda current: current.model_copy(update={"status": RecordingStatus.stopped}),
+            lambda current: current.model_copy(
+                update={
+                    "status": RecordingStatus.stopped,
+                    "progress": RecordingProgress.stopped,
+                    "progress_message": "Stopping the recording...",
+                }
+            ),
         )
         self._terminate_process(job.pid)
         self._wait_for_thread_cleanup(job_id)
@@ -89,6 +103,8 @@ class RecorderService:
                 lambda current: current.model_copy(
                     update={
                         "status": RecordingStatus.failed,
+                        "progress": RecordingProgress.failed,
+                        "progress_message": "The recorder could not be started.",
                         "error": str(exc),
                         "finished_at": utc_now(),
                     }
@@ -103,6 +119,8 @@ class RecorderService:
         self.job_store.update_job(job_id, lambda current: current.model_copy(
             update={
                 "status": RecordingStatus.running,
+                "progress": RecordingProgress.recording,
+                "progress_message": "Recording is in progress.",
                 "pid": process.pid,
                 "started_at": utc_now(),
                 "error": None,
@@ -110,6 +128,15 @@ class RecorderService:
         ))
 
         stdout, stderr = process.communicate()
+        self.job_store.update_job(
+            job_id,
+            lambda current: current.model_copy(
+                update={
+                    "progress": RecordingProgress.finalizing,
+                    "progress_message": "Finalizing the recording...",
+                }
+            ),
+        )
         after = self.file_service.snapshot_output()
         detected_file = self.file_service.detect_output_file(before, after)
         return_code = process.returncode
@@ -119,19 +146,27 @@ class RecorderService:
 
         if return_code == 0:
             status = RecordingStatus.finished
+            progress = RecordingProgress.ready
+            progress_message = "Recording finished and ready to download."
             error = None
         else:
             job_after = self.job_store.get_job(job_id)
             status = RecordingStatus.stopped if job_after and job_after.status == RecordingStatus.stopped else RecordingStatus.failed
+            progress = RecordingProgress.stopped if status == RecordingStatus.stopped else RecordingProgress.failed
+            progress_message = "Recording stopped." if status == RecordingStatus.stopped else "The recording ended with an error."
             error = stderr.strip() or stdout.strip() or f"recorder exited with code {return_code}"
 
         if status == RecordingStatus.stopped and detected_file is None:
             status = RecordingStatus.failed
+            progress = RecordingProgress.failed
+            progress_message = "The recording stopped before a file was created."
             error = error or "recording stopped before output file was created"
 
         file_path = str(detected_file) if detected_file else None
         if return_code == 0 and not file_path:
             status = RecordingStatus.failed
+            progress = RecordingProgress.failed
+            progress_message = "The recording finished, but no file was created."
             error = "recorder finished but no output file was detected"
 
         self.job_store.update_job(
@@ -139,6 +174,8 @@ class RecorderService:
             lambda current: current.model_copy(
                 update={
                     "status": status,
+                    "progress": progress,
+                    "progress_message": progress_message,
                     "file_path": file_path,
                     "finished_at": utc_now(),
                     "error": error,

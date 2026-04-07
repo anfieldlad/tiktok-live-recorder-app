@@ -6,21 +6,18 @@
   <title>TikTok Live Recorder App</title>
   <style>
     :root {
-      color-scheme: light;
       --bg: #f3efe6;
       --panel: rgba(255, 252, 246, 0.95);
       --ink: #161512;
       --muted: #625c54;
       --line: rgba(22, 21, 18, 0.12);
       --accent: #cb5b37;
-      --accent-2: #17655d;
+      --accent2: #17655d;
       --danger: #b43b3b;
       --warn: #9a6a1c;
       --shadow: 0 20px 60px rgba(22, 21, 18, 0.09);
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -32,78 +29,30 @@
         linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
       padding: 28px 18px 42px;
     }
-
-    .wrap {
-      max-width: 1120px;
-      margin: 0 auto;
-    }
-
-    .hero,
-    .panel {
+    .wrap { max-width: 1160px; margin: 0 auto; }
+    .hero, .panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 24px;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
     }
-
-    .hero {
-      padding: 30px;
-      margin-bottom: 20px;
-    }
-
+    .hero { padding: 30px; margin-bottom: 20px; }
     .eyebrow {
       margin: 0 0 10px;
       font-size: 0.75rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: var(--accent-2);
+      color: var(--accent2);
     }
-
-    h1 {
-      margin: 0 0 12px;
-      font-size: clamp(2rem, 4vw, 3.8rem);
-      line-height: 0.95;
-    }
-
-    p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.65;
-    }
-
-    .layout {
-      display: grid;
-      gap: 20px;
-      grid-template-columns: 360px 1fr;
-      align-items: start;
-    }
-
-    .panel {
-      padding: 24px;
-    }
-
-    .panel h2 {
-      margin: 0 0 14px;
-      font-size: 1.12rem;
-    }
-
-    .stack {
-      display: grid;
-      gap: 20px;
-    }
-
-    .field {
-      display: grid;
-      gap: 7px;
-      margin-bottom: 14px;
-    }
-
-    label {
-      font-size: 0.92rem;
-      color: var(--muted);
-    }
-
+    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3.8rem); line-height: 0.95; }
+    h2 { margin: 0 0 10px; font-size: 1.16rem; }
+    h3 { margin: 0; font-size: 1rem; }
+    p { margin: 0; color: var(--muted); line-height: 1.65; }
+    .layout { display: grid; gap: 20px; grid-template-columns: minmax(320px, 380px) 1fr; align-items: start; }
+    .stack, .lists, .steps, .jobs, .watch-list, .meta { display: grid; gap: 20px; }
+    .panel, .step, .job-card { padding: 24px; }
+    .field { display: grid; gap: 7px; margin-bottom: 14px; }
+    label { font-size: 0.92rem; color: var(--muted); }
     input {
       width: 100%;
       border: 1px solid var(--line);
@@ -113,78 +62,22 @@
       color: var(--ink);
       background: rgba(255, 255, 255, 0.8);
     }
-
-    input:focus {
-      outline: 2px solid rgba(23, 101, 93, 0.18);
-      border-color: rgba(23, 101, 93, 0.35);
-    }
-
-    .actions,
-    .toolbar,
-    .job-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    button,
-    .button-link {
+    .actions, .toolbar, .job-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button, .button-link {
       border: 0;
       border-radius: 999px;
       padding: 11px 16px;
       font: inherit;
       cursor: pointer;
       text-decoration: none;
-      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+      transition: transform 140ms ease, opacity 140ms ease;
     }
-
-    button:hover,
-    .button-link:hover {
-      transform: translateY(-1px);
-    }
-
-    button.primary,
-    .button-link.primary {
-      background: var(--accent);
-      color: #fffaf6;
-    }
-
-    button.secondary,
-    .button-link.secondary {
-      background: rgba(22, 21, 18, 0.08);
-      color: var(--ink);
-    }
-
-    button.danger {
-      background: rgba(180, 59, 59, 0.12);
-      color: var(--danger);
-    }
-
-    button.warn {
-      background: rgba(154, 106, 28, 0.12);
-      color: var(--warn);
-    }
-
-    button:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .meta {
-      display: grid;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    code {
-      background: rgba(22, 21, 18, 0.06);
-      border-radius: 8px;
-      padding: 2px 6px;
-      font-size: 0.92em;
-    }
-
+    button:hover, .button-link:hover { transform: translateY(-1px); }
+    .primary { background: var(--accent); color: #fffaf6; }
+    .secondary { background: rgba(22, 21, 18, 0.08); color: var(--ink); }
+    .danger { background: rgba(180, 59, 59, 0.12); color: var(--danger); }
+    .warn { background: rgba(154, 106, 28, 0.12); color: var(--warn); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
     .notice {
       margin-top: 12px;
       border-radius: 16px;
@@ -194,64 +87,9 @@
       min-height: 48px;
       white-space: pre-wrap;
     }
-
-    .notice.error {
-      background: rgba(180, 59, 59, 0.1);
-      color: #7b2626;
-    }
-
-    .notice.success {
-      background: rgba(23, 101, 93, 0.11);
-      color: #144d47;
-    }
-
-    details {
-      margin-top: 14px;
-    }
-
-    details summary {
-      cursor: pointer;
-      color: var(--muted);
-      user-select: none;
-    }
-
-    .compact-actions {
-      display: grid;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .compact-actions button {
-      width: 100%;
-    }
-
-    .jobs {
-      display: grid;
-      gap: 14px;
-    }
-
-    .job-card {
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 18px;
-      background: rgba(255, 255, 255, 0.66);
-    }
-
-    .job-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: start;
-      margin-bottom: 12px;
-    }
-
-    .job-title {
-      margin: 0;
-      font-size: 1.02rem;
-      overflow-wrap: anywhere;
-    }
-
-    .status {
+    .notice.error { background: rgba(180, 59, 59, 0.1); color: #7b2626; }
+    .notice.success { background: rgba(23, 101, 93, 0.11); color: #144d47; }
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -259,35 +97,40 @@
       border-radius: 999px;
       font-size: 0.84rem;
       background: rgba(22, 21, 18, 0.08);
-      color: var(--ink);
       white-space: nowrap;
     }
-
-    .status.running,
-    .status.queued {
-      background: rgba(154, 106, 28, 0.12);
-      color: var(--warn);
+    .good { background: rgba(23, 101, 93, 0.12); color: var(--accent2); }
+    .bad { background: rgba(180, 59, 59, 0.12); color: var(--danger); }
+    .soft { background: rgba(154, 106, 28, 0.12); color: var(--warn); }
+    .step, .job-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.66);
     }
-
-    .status.finished,
-    .status.stopped {
-      background: rgba(23, 101, 93, 0.12);
-      color: var(--accent-2);
-    }
-
-    .status.failed {
-      background: rgba(180, 59, 59, 0.12);
-      color: var(--danger);
-    }
-
-    .job-meta {
-      display: grid;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 0.94rem;
+    .step-head, .split-header, .job-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 14px;
       margin-bottom: 12px;
     }
-
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(203, 91, 55, 0.12);
+      color: var(--accent);
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin-right: 10px;
+    }
+    .step-title { display: flex; align-items: center; }
+    .subtle, .small { font-size: 0.9rem; color: var(--muted); }
+    .small { font-size: 0.88rem; }
+    .job-meta { display: grid; gap: 6px; color: var(--muted); font-size: 0.94rem; margin-bottom: 12px; }
     .empty {
       border: 1px dashed var(--line);
       border-radius: 20px;
@@ -296,16 +139,10 @@
       text-align: center;
       background: rgba(255, 255, 255, 0.45);
     }
-
-    .small {
-      font-size: 0.88rem;
-    }
-
-    @media (max-width: 920px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-    }
+    details { margin-top: 14px; }
+    details summary { cursor: pointer; color: var(--muted); }
+    code { background: rgba(22, 21, 18, 0.06); border-radius: 8px; padding: 2px 6px; font-size: 0.92em; }
+    @media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -313,143 +150,173 @@
     <section class="hero">
       <p class="eyebrow">Local Dashboard</p>
       <h1>TikTok Live Recorder App</h1>
-      <p>
-        Run recordings locally, track progress in the browser, and download completed files when they are ready.
-        Powered by <code>Michele0303/tiktok-live-recorder</code>.
-      </p>
+      <p>Record a live right now, or keep watching an account until it goes live and start automatically. Powered by <code>Michele0303/tiktok-live-recorder</code>.</p>
     </section>
 
     <section class="layout">
       <div class="stack">
         <article class="panel">
-          <h2>Record</h2>
-          <form id="recording-form">
+          <h2>Record now</h2>
+          <p class="subtle">Paste a TikTok username or live URL. If the account is live and accessible, recording starts right away.</p>
+          <form id="recording-form" style="margin-top: 16px;">
             <div class="field">
-              <label for="source">TikTok username or live URL</label>
-              <input id="source" name="source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
+              <label for="record-source">TikTok username or live URL</label>
+              <input id="record-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
             </div>
-
             <div class="field">
-              <label for="duration">Duration in seconds (optional)</label>
-              <input id="duration" name="duration" type="number" min="1" placeholder="for example 120">
+              <label for="record-duration">Duration in seconds (optional)</label>
+              <input id="record-duration" type="number" min="1" placeholder="Leave blank to record until the live ends">
             </div>
-
             <div class="actions">
               <button class="primary" type="submit">Record</button>
-              <button class="secondary" type="button" id="clear-form">Clear</button>
+              <button class="secondary" type="button" id="clear-record-form">Clear</button>
             </div>
           </form>
-          <div id="form-notice" class="notice">Enter a TikTok username or live URL, then click Record. The app will detect the input automatically.</div>
+          <div id="record-notice" class="notice">Enter a TikTok username or live URL, then click Record.</div>
         </article>
 
         <article class="panel">
-          <h2>TikTok Session</h2>
-          <div class="meta" style="margin-bottom: 14px;">
-            <div>Status: <strong id="cookie-status-text">{{ "Configured" if cookies_configured else "Not configured" }}</strong></div>
-            <div>Browser login: <strong id="browser-login-status">{{ "Open" if browser_login_status.browser_open else "Closed" }}</strong></div>
-            <div class="small">Recommended flow: open the login browser, sign in to TikTok, close that browser, then capture the session.</div>
-          </div>
-          <div class="compact-actions">
-            <button class="primary" type="button" id="login-chrome">1. Login with Chrome</button>
-            <button class="primary" type="button" id="login-edge">1. Login with Edge</button>
-            <button class="secondary" type="button" id="capture-login">2. Capture Login Session</button>
-            <button class="danger" type="button" id="close-login">Close Login Browser</button>
-          </div>
-          <div id="session-notice" class="notice">No TikTok session is saved yet. Use the login flow above if you need access to private or restricted lives.</div>
+          <h2>Watch mode</h2>
+          <p class="subtle">Use this when the creator is offline now. The app will keep checking and start recording automatically when the live begins.</p>
+          <form id="watch-form" style="margin-top: 16px;">
+            <div class="field">
+              <label for="watch-source">TikTok username or live URL</label>
+              <input id="watch-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
+            </div>
+            <div class="field">
+              <label for="watch-duration">Duration in seconds (optional)</label>
+              <input id="watch-duration" type="number" min="1" placeholder="Leave blank to record until the live ends">
+            </div>
+            <div class="actions">
+              <button class="primary" type="submit">Watch and auto-record</button>
+              <button class="secondary" type="button" id="clear-watch-form">Clear</button>
+            </div>
+          </form>
+          <div id="watch-notice" class="notice">Create a watch to keep checking an account until the live becomes available.</div>
+        </article>
 
+        <article class="panel">
+          <div class="split-header">
+            <div>
+              <h2>Unlock private lives</h2>
+              <p class="small">You only need this when a private or restricted live requires your TikTok session.</p>
+            </div>
+            <span id="session-pill" class="pill {{ 'good' if cookies_configured else 'soft' }}">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="step-head">
+                <div class="step-title"><span class="step-number">1</span><h3>Open a login browser</h3></div>
+              </div>
+              <p class="subtle">Open a clean Chrome or Edge window just for TikTok sign-in.</p>
+              <div class="actions" style="margin-top: 12px;">
+                <button class="primary" type="button" id="login-chrome">Open Chrome</button>
+                <button class="secondary" type="button" id="login-edge">Open Edge</button>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-head">
+                <div class="step-title"><span class="step-number">2</span><h3>Sign in, then close that browser</h3></div>
+              </div>
+              <p class="subtle">Finish the TikTok sign-in flow in that window. Then close that login window so the session can be saved safely.</p>
+              <div class="actions" style="margin-top: 12px;">
+                <button class="danger" type="button" id="close-login">Close login browser</button>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-head">
+                <div class="step-title"><span class="step-number">3</span><h3>Save the session</h3></div>
+              </div>
+              <p class="subtle">Capture the signed-in session for private or follower-only lives.</p>
+              <div class="actions" style="margin-top: 12px;">
+                <button class="primary" type="button" id="capture-login">Capture session</button>
+              </div>
+            </div>
+          </div>
+          <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
           <details>
-            <summary>Advanced options</summary>
+            <summary>Advanced session options</summary>
             <form id="cookies-form" style="margin-top: 14px;">
               <div class="field">
                 <label for="session-ss">session_ss</label>
-                <input id="session-ss" name="session_ss" type="text" placeholder="Paste session_ss here">
+                <input id="session-ss" type="text" placeholder="Paste session_ss here">
               </div>
               <div class="actions">
-                <button class="primary" type="submit">Save Session</button>
+                <button class="primary" type="submit">Save session manually</button>
                 <button class="secondary" type="button" id="import-chrome">Import Chrome</button>
                 <button class="secondary" type="button" id="import-edge">Import Edge</button>
-                <button class="danger" type="button" id="clear-cookies">Clear Session</button>
+                <button class="danger" type="button" id="clear-cookies">Clear session</button>
               </div>
             </form>
           </details>
         </article>
-
-        <article class="panel">
-          <h2>Environment</h2>
-          <div class="meta">
-            <div>Recorder dir: <code>{{ settings.recorder_dir }}</code></div>
-            <div>Entrypoint: <code>{{ settings.recorder_entrypoint }}</code></div>
-            <div>Cookies file: <code>{{ settings.recorder_cookies_file }}</code></div>
-            <div>Output dir: <code>{{ settings.output_dir }}</code></div>
-            <div>Jobs file: <code>{{ settings.jobs_file }}</code></div>
-          </div>
-        </article>
       </div>
 
-      <article class="panel">
-        <div class="toolbar" style="justify-content: space-between; align-items: center; margin-bottom: 14px;">
-          <h2 style="margin: 0;">Jobs</h2>
-          <div class="actions">
-            <button class="secondary" type="button" id="refresh-jobs">Refresh</button>
-            <button class="secondary" type="button" id="toggle-auto-refresh">Auto Refresh: On</button>
+      <div class="lists">
+        <article class="panel">
+          <div class="split-header">
+            <div>
+              <h2>Recording activity</h2>
+              <p class="small">Track each recording with a simple phase, a status message, and quick actions.</p>
+            </div>
+            <div class="actions">
+              <button class="secondary" type="button" id="refresh-all">Refresh</button>
+              <button class="secondary" type="button" id="toggle-auto-refresh">Auto Refresh: On</button>
+            </div>
           </div>
-        </div>
+          <div id="jobs-container" class="jobs"></div>
+        </article>
 
-        <div id="jobs-container" class="jobs">
-          {% if jobs %}
-            {% for job in jobs %}
-              <article class="job-card">
-                <div class="job-top">
-                  <div>
-                    <h3 class="job-title">{{ job.username or job.url }}</h3>
-                    <div class="small"><code>{{ job.id }}</code></div>
-                  </div>
-                  <span class="status {{ job.status }}">{{ job.status }}</span>
-                </div>
-                <div class="job-meta">
-                  <div>Created: {{ job.created_at }}</div>
-                  <div>File: {{ job.file_path or "-" }}</div>
-                </div>
-              </article>
-            {% endfor %}
-          {% else %}
-            <div class="empty">No recordings yet. Start with the form on the left.</div>
-          {% endif %}
-        </div>
-      </article>
+        <article class="panel">
+          <h2>Watch list</h2>
+          <p class="small" style="margin-bottom: 14px;">These watches keep checking TikTok until a live starts or you stop them.</p>
+          <div id="watch-container" class="watch-list"></div>
+        </article>
+
+        <article class="panel">
+          <details>
+            <summary>Environment details</summary>
+            <div class="job-meta" style="margin-top: 14px; margin-bottom: 0;">
+              <div>Recorder dir: <code>{{ settings.recorder_dir }}</code></div>
+              <div>Entrypoint: <code>{{ settings.recorder_entrypoint }}</code></div>
+              <div>Cookies file: <code>{{ settings.recorder_cookies_file }}</code></div>
+              <div>Output dir: <code>{{ settings.output_dir }}</code></div>
+              <div>Jobs file: <code>{{ settings.jobs_file }}</code></div>
+            </div>
+          </details>
+        </article>
+      </div>
     </section>
   </main>
 
   <script>
     const jobsContainer = document.getElementById("jobs-container");
-    const form = document.getElementById("recording-form");
-    const formNotice = document.getElementById("form-notice");
+    const watchContainer = document.getElementById("watch-container");
+    const recordForm = document.getElementById("recording-form");
+    const watchForm = document.getElementById("watch-form");
+    const recordNotice = document.getElementById("record-notice");
+    const watchNotice = document.getElementById("watch-notice");
     const sessionNotice = document.getElementById("session-notice");
-    const clearFormButton = document.getElementById("clear-form");
+    const clearRecordFormButton = document.getElementById("clear-record-form");
+    const clearWatchFormButton = document.getElementById("clear-watch-form");
     const cookiesForm = document.getElementById("cookies-form");
     const clearCookiesButton = document.getElementById("clear-cookies");
     const importChromeButton = document.getElementById("import-chrome");
     const importEdgeButton = document.getElementById("import-edge");
-    const cookieStatusText = document.getElementById("cookie-status-text");
-    const browserLoginStatus = document.getElementById("browser-login-status");
+    const sessionPill = document.getElementById("session-pill");
     const loginChromeButton = document.getElementById("login-chrome");
     const loginEdgeButton = document.getElementById("login-edge");
     const captureLoginButton = document.getElementById("capture-login");
     const closeLoginButton = document.getElementById("close-login");
-    const refreshButton = document.getElementById("refresh-jobs");
+    const refreshAllButton = document.getElementById("refresh-all");
     const autoRefreshButton = document.getElementById("toggle-auto-refresh");
 
     let autoRefreshEnabled = true;
     let refreshTimer = null;
 
-    function setNotice(message, type = "") {
-      formNotice.textContent = message;
-      formNotice.className = `notice ${type}`.trim();
-    }
-
-    function setSessionNotice(message, type = "") {
-      sessionNotice.textContent = message;
-      sessionNotice.className = `notice ${type}`.trim();
+    function setNotice(element, message, type = "") {
+      element.textContent = message;
+      element.className = `notice ${type}`.trim();
     }
 
     function formatDate(value) {
@@ -459,91 +326,44 @@
       return date.toLocaleString();
     }
 
-    function buildJobActions(job) {
-      const actions = [];
-
-      if (job.status === "running") {
-        actions.push(`<button class="warn" data-action="stop" data-id="${job.id}">Stop</button>`);
+    function formatBytes(value) {
+      if (value === null || value === undefined) return "-";
+      const units = ["B", "KB", "MB", "GB"];
+      let size = value;
+      let unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex += 1;
       }
-
-      if ((job.status === "finished" || job.status === "stopped") && job.file_path) {
-        actions.push(`<a class="button-link primary" href="/recordings/${job.id}/download">Download</a>`);
-      }
-
-      actions.push(`<button class="danger" data-action="delete" data-id="${job.id}">Delete</button>`);
-      return actions.join("");
+      return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
     }
 
-    function renderJobs(jobs) {
-      if (!jobs.length) {
-        jobsContainer.innerHTML = '<div class="empty">No recordings yet. Start with the form on the left.</div>';
-        return;
-      }
-
-      jobsContainer.innerHTML = jobs.map((job) => `
-        <article class="job-card">
-          <div class="job-top">
-            <div>
-              <h3 class="job-title">${job.username || job.url || "-"}</h3>
-              <div class="small"><code>${job.id}</code></div>
-            </div>
-            <span class="status ${job.status}">${job.status}</span>
-          </div>
-
-          <div class="job-meta">
-            <div>Created: ${formatDate(job.created_at)}</div>
-            <div>Started: ${formatDate(job.started_at)}</div>
-            <div>Finished: ${formatDate(job.finished_at)}</div>
-            <div>Duration: ${job.duration ?? "-"}</div>
-            <div>File: ${job.file_path || "-"}</div>
-            <div>Error: ${job.error || "-"}</div>
-          </div>
-
-          <div class="job-actions">
-            ${buildJobActions(job)}
-          </div>
-        </article>
-      `).join("");
+    function humanizePhase(progress) {
+      const labels = {
+        preparing: "Preparing",
+        recording: "Recording",
+        finalizing: "Finalizing",
+        ready: "Ready",
+        failed: "Failed",
+        stopped: "Stopped",
+      };
+      return labels[progress] || progress || "Unknown";
     }
 
-    async function fetchJobs() {
-      const response = await fetch("/recordings");
-      if (!response.ok) {
-        throw new Error(`Failed to load jobs: ${response.status}`);
+    function badgeClass(value, type) {
+      if (type === "watch") {
+        if (value === "completed") return "good";
+        if (value === "failed" || value === "stopped") return "bad";
+        return "soft";
       }
-      const jobs = await response.json();
-      renderJobs(jobs);
+      if (value === "ready") return "good";
+      if (value === "failed" || value === "stopped") return "bad";
+      return "soft";
     }
 
-    async function submitJob(event) {
-      event.preventDefault();
-      const payload = buildRecordingPayload();
-
-      setNotice("Checking the account and starting the recording...", "");
-
-      try {
-        const response = await fetch("/recordings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || "Couldn't start the recording.");
-        }
-
-        setNotice(`Recording started. Job ID: ${body.id}`, "success");
-        form.reset();
-        await fetchJobs();
-      } catch (error) {
-        setNotice(error.message, "error");
-      }
-    }
-
-    function buildRecordingPayload() {
-      const source = document.getElementById("source").value.trim();
-      const duration = document.getElementById("duration").value.trim();
+    function buildSourcePayload(sourceInputId, durationInputId) {
+      const source = document.getElementById(sourceInputId).value.trim();
+      const duration = document.getElementById(durationInputId).value.trim();
       const payload = {};
       if (source) {
         const normalized = source.replace(/^@+/, "").trim();
@@ -554,11 +374,104 @@
           payload.username = normalized;
         }
       }
-      if (duration) payload.duration = Number(duration);
+      if (duration) {
+        payload.duration = Number(duration);
+      }
       return payload;
     }
 
-    async function refreshCookieStatus() {
+    function buildRecordingActions(job) {
+      const actions = [];
+      if (job.status === "running") {
+        actions.push(`<button class="warn" data-action="stop-recording" data-id="${job.id}">Stop</button>`);
+      }
+      if ((job.status === "finished" || job.status === "stopped") && job.file_path) {
+        actions.push(`<a class="button-link primary" href="/recordings/${job.id}/download">Download</a>`);
+      }
+      actions.push(`<button class="danger" data-action="delete-recording" data-id="${job.id}">Delete</button>`);
+      return actions.join("");
+    }
+
+    function buildWatchActions(job) {
+      const actions = [];
+      if (job.status === "watching" || job.status === "recording") {
+        actions.push(`<button class="warn" data-action="stop-watch" data-id="${job.id}">Stop watch</button>`);
+      }
+      actions.push(`<button class="danger" data-action="delete-watch" data-id="${job.id}">Delete</button>`);
+      return actions.join("");
+    }
+
+    function renderJobs(jobs) {
+      if (!jobs.length) {
+        jobsContainer.innerHTML = '<div class="empty">No recordings yet. When a recording starts, it will appear here.</div>';
+        return;
+      }
+
+      jobsContainer.innerHTML = jobs.map((job) => `
+        <article class="job-card">
+          <div class="job-top">
+            <div>
+              <h3>${job.username || job.url || "-"}</h3>
+              <div class="small"><code>${job.id}</code></div>
+            </div>
+            <span class="pill ${badgeClass(job.progress, "recording")}">${humanizePhase(job.progress)}</span>
+          </div>
+          <div class="job-meta">
+            <div>Status message: ${job.progress_message || "-"}</div>
+            <div>Created: ${formatDate(job.created_at)}</div>
+            <div>Started: ${formatDate(job.started_at)}</div>
+            <div>Finished: ${formatDate(job.finished_at)}</div>
+            <div>Duration: ${job.duration ? `${job.duration} seconds` : "Until the live ends"}</div>
+            <div>File size: ${formatBytes(job.file_size_bytes)}</div>
+            <div>File: ${job.file_path || "-"}</div>
+            <div>Error: ${job.error || "-"}</div>
+          </div>
+          <div class="job-actions">${buildRecordingActions(job)}</div>
+        </article>
+      `).join("");
+    }
+
+    function renderWatchJobs(jobs) {
+      if (!jobs.length) {
+        watchContainer.innerHTML = '<div class="empty">No watches yet. Create one when you want the app to wait for a live and start automatically.</div>';
+        return;
+      }
+
+      watchContainer.innerHTML = jobs.map((job) => `
+        <article class="job-card">
+          <div class="job-top">
+            <div>
+              <h3>${job.username || job.url || "-"}</h3>
+              <div class="small"><code>${job.id}</code></div>
+            </div>
+            <span class="pill ${badgeClass(job.status, "watch")}">${job.status}</span>
+          </div>
+          <div class="job-meta">
+            <div>Latest update: ${job.last_message || "-"}</div>
+            <div>Last checked: ${formatDate(job.last_checked_at)}</div>
+            <div>Created: ${formatDate(job.created_at)}</div>
+            <div>Finished: ${formatDate(job.finished_at)}</div>
+            <div>Duration: ${job.duration ? `${job.duration} seconds` : "Until the live ends"}</div>
+            <div>Linked recording: ${job.linked_recording_job_id || "-"}</div>
+          </div>
+          <div class="job-actions">${buildWatchActions(job)}</div>
+        </article>
+      `).join("");
+    }
+
+    async function fetchRecordings() {
+      const response = await fetch("/recordings");
+      if (!response.ok) throw new Error(`Failed to load recordings: ${response.status}`);
+      renderJobs(await response.json());
+    }
+
+    async function fetchWatchJobs() {
+      const response = await fetch("/watch-recordings");
+      if (!response.ok) throw new Error(`Failed to load watch jobs: ${response.status}`);
+      renderWatchJobs(await response.json());
+    }
+
+    async function refreshSessionStatus() {
       const [cookieResponse, loginResponse] = await Promise.all([
         fetch("/auth/status"),
         fetch("/auth/login-browser/status"),
@@ -566,38 +479,86 @@
       if (!cookieResponse.ok || !loginResponse.ok) {
         throw new Error("Failed to load TikTok session status");
       }
+
       const cookieBody = await cookieResponse.json();
       const loginBody = await loginResponse.json();
-      cookieStatusText.textContent = cookieBody.configured ? "Configured" : "Not configured";
-      browserLoginStatus.textContent = loginBody.browser_open
-        ? (loginBody.authenticated ? "Open and signed in" : "Open")
-        : "Closed";
+      sessionPill.textContent = cookieBody.configured ? "Session ready" : "Session needed";
+      sessionPill.className = `pill ${cookieBody.configured ? "good" : "soft"}`;
+
+      if (cookieBody.configured) {
+        setNotice(sessionNotice, "Your TikTok session is ready.", "success");
+      } else if (loginBody.browser_open) {
+        setNotice(sessionNotice, "The TikTok login window is open. Finish signing in there, then close it and click Capture session.", "");
+      } else {
+        setNotice(sessionNotice, "No TikTok session is saved yet. You only need this for private or restricted lives.", "");
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([fetchRecordings(), fetchWatchJobs(), refreshSessionStatus()]);
+    }
+
+    async function submitRecording(event) {
+      event.preventDefault();
+      const payload = buildSourcePayload("record-source", "record-duration");
+      setNotice(recordNotice, "Checking the account and starting the recording...", "");
+      try {
+        const response = await fetch("/recordings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't start the recording.");
+        setNotice(recordNotice, `Recording started. Job ID: ${body.id}`, "success");
+        recordForm.reset();
+        await fetchRecordings();
+      } catch (error) {
+        setNotice(recordNotice, error.message, "error");
+      }
+    }
+
+    async function submitWatch(event) {
+      event.preventDefault();
+      const payload = buildSourcePayload("watch-source", "watch-duration");
+      setNotice(watchNotice, "Creating a watch and checking the account...", "");
+      try {
+        const response = await fetch("/watch-recordings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't create the watch.");
+        setNotice(watchNotice, "Watch mode is active. Recording will start automatically when the live becomes available.", "success");
+        watchForm.reset();
+        await fetchWatchJobs();
+      } catch (error) {
+        setNotice(watchNotice, error.message, "error");
+      }
     }
 
     async function saveCookies(event) {
       event.preventDefault();
       const sessionInput = document.getElementById("session-ss");
-      const session_ss = sessionInput.value.trim();
-      if (!session_ss) {
-        setSessionNotice("Please enter a session_ss value.", "error");
+      const sessionValue = sessionInput.value.trim();
+      if (!sessionValue) {
+        setNotice(sessionNotice, "Please enter a session_ss value.", "error");
         return;
       }
-
       try {
         const response = await fetch("/auth/tiktok-cookies", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_ss }),
+          body: JSON.stringify({ session_ss: sessionValue }),
         });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || "Couldn't save the TikTok session.");
-        }
-        await refreshCookieStatus();
+        if (!response.ok) throw new Error(body.detail || "Couldn't save the TikTok session.");
         sessionInput.value = "";
-        setSessionNotice("TikTok session saved.", "success");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "TikTok session saved.", "success");
       } catch (error) {
-        setSessionNotice(error.message, "error");
+        setNotice(sessionNotice, error.message, "error");
       }
     }
 
@@ -605,60 +566,52 @@
       try {
         const response = await fetch("/auth/tiktok-cookies", { method: "DELETE" });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || "Couldn't clear the TikTok session.");
-        }
-        await refreshCookieStatus();
+        if (!response.ok) throw new Error(body.detail || "Couldn't clear the TikTok session.");
         document.getElementById("session-ss").value = "";
-        setSessionNotice("TikTok session cleared.", "success");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "TikTok session cleared.", "success");
       } catch (error) {
-        setSessionNotice(error.message, "error");
+        setNotice(sessionNotice, error.message, "error");
       }
     }
 
     async function importCookies(browserName) {
       try {
-        setSessionNotice(`Importing TikTok session from ${browserName}...`, "");
+        setNotice(sessionNotice, `Importing TikTok session from ${browserName}...`, "");
         const response = await fetch(`/auth/import-browser/${browserName}`, { method: "POST" });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || `Couldn't import cookies from ${browserName}.`);
-        }
-        await refreshCookieStatus();
+        if (!response.ok) throw new Error(body.detail || `Couldn't import cookies from ${browserName}.`);
         document.getElementById("session-ss").value = "";
-        setSessionNotice(`TikTok session imported from ${browserName}.`, "success");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, `TikTok session imported from ${browserName}.`, "success");
       } catch (error) {
-        setSessionNotice(error.message, "error");
+        setNotice(sessionNotice, error.message, "error");
       }
     }
 
     async function startBrowserLogin(browserName) {
       try {
-        setSessionNotice(`Opening TikTok login in ${browserName}...`, "");
+        setNotice(sessionNotice, `Opening a TikTok login window in ${browserName}...`, "");
         const response = await fetch(`/auth/login-browser/${browserName}/start`, { method: "POST" });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || `Couldn't open the login browser in ${browserName}.`);
-        }
-        await refreshCookieStatus();
-        setSessionNotice(`TikTok login is open in ${browserName}. Finish signing in there, close that browser, then click Capture Login Session.`, "success");
+        if (!response.ok) throw new Error(body.detail || `Couldn't open the login browser in ${browserName}.`);
+        await refreshSessionStatus();
+        setNotice(sessionNotice, `The TikTok login window is open in ${browserName}. Finish signing in there, then close that window and click Capture session.`, "success");
       } catch (error) {
-        setSessionNotice(error.message, "error");
+        setNotice(sessionNotice, error.message, "error");
       }
     }
 
     async function captureBrowserLogin() {
       try {
-        setSessionNotice("Capturing the TikTok session...", "");
+        setNotice(sessionNotice, "Capturing the TikTok session...", "");
         const response = await fetch("/auth/login-browser/capture", { method: "POST" });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || "Couldn't capture the TikTok session.");
-        }
-        await refreshCookieStatus();
-        setSessionNotice("TikTok session captured and saved.", "success");
+        if (!response.ok) throw new Error(body.detail || "Couldn't capture the TikTok session.");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "TikTok session captured and saved.", "success");
       } catch (error) {
-        setSessionNotice(error.message, "error");
+        setNotice(sessionNotice, error.message, "error");
       }
     }
 
@@ -666,41 +619,41 @@
       try {
         const response = await fetch("/auth/login-browser/close", { method: "POST" });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || "Couldn't close the login browser.");
-        }
-        await refreshCookieStatus();
-        setSessionNotice("Login browser closed.", "success");
+        if (!response.ok) throw new Error(body.detail || "Couldn't close the login browser.");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "Login browser closed.", "success");
       } catch (error) {
-        setSessionNotice(error.message, "error");
+        setNotice(sessionNotice, error.message, "error");
       }
     }
 
-    async function handleJobAction(event) {
+    async function handleActionClick(event) {
       const button = event.target.closest("button[data-action]");
       if (!button) return;
-
       const action = button.dataset.action;
-      const jobId = button.dataset.id;
+      const itemId = button.dataset.id;
       button.disabled = true;
-
       try {
-        let response;
-        if (action === "stop") {
-          response = await fetch(`/recordings/${jobId}/stop`, { method: "POST" });
-        } else if (action === "delete") {
-          response = await fetch(`/recordings/${jobId}`, { method: "DELETE" });
-        }
-
+        let response = null;
+        if (action === "stop-recording") response = await fetch(`/recordings/${itemId}/stop`, { method: "POST" });
+        if (action === "delete-recording") response = await fetch(`/recordings/${itemId}`, { method: "DELETE" });
+        if (action === "stop-watch") response = await fetch(`/watch-recordings/${itemId}/stop`, { method: "POST" });
+        if (action === "delete-watch") response = await fetch(`/watch-recordings/${itemId}`, { method: "DELETE" });
         const body = await response.json();
-        if (!response.ok) {
-          throw new Error(body.detail || `Couldn't ${action} this job.`);
+        if (!response.ok) throw new Error(body.detail || "The action could not be completed.");
+        if (action.includes("watch")) {
+          setNotice(watchNotice, "Watch list updated.", "success");
+          await fetchWatchJobs();
+        } else {
+          setNotice(recordNotice, "Recording updated.", "success");
+          await fetchRecordings();
         }
-
-        setNotice(`Job ${action} complete.`, "success");
-        await fetchJobs();
       } catch (error) {
-        setNotice(error.message, "error");
+        if (action.includes("watch")) {
+          setNotice(watchNotice, error.message, "error");
+        } else {
+          setNotice(recordNotice, error.message, "error");
+        }
       } finally {
         button.disabled = false;
       }
@@ -715,12 +668,13 @@
       }
       if (enabled) {
         refreshTimer = window.setInterval(() => {
-          fetchJobs().catch((error) => setNotice(error.message, "error"));
+          refreshAll().catch((error) => setNotice(recordNotice, error.message, "error"));
         }, 5000);
       }
     }
 
-    form.addEventListener("submit", submitJob);
+    recordForm.addEventListener("submit", submitRecording);
+    watchForm.addEventListener("submit", submitWatch);
     cookiesForm.addEventListener("submit", saveCookies);
     clearCookiesButton.addEventListener("click", clearCookies);
     importChromeButton.addEventListener("click", () => importCookies("chrome"));
@@ -729,19 +683,23 @@
     loginEdgeButton.addEventListener("click", () => startBrowserLogin("edge"));
     captureLoginButton.addEventListener("click", captureBrowserLogin);
     closeLoginButton.addEventListener("click", closeBrowserLogin);
-    clearFormButton.addEventListener("click", () => {
-      form.reset();
-      setNotice("Form cleared.", "");
+    clearRecordFormButton.addEventListener("click", () => {
+      recordForm.reset();
+      setNotice(recordNotice, "Record form cleared.", "");
     });
-    refreshButton.addEventListener("click", () => {
-      fetchJobs().catch((error) => setNotice(error.message, "error"));
+    clearWatchFormButton.addEventListener("click", () => {
+      watchForm.reset();
+      setNotice(watchNotice, "Watch form cleared.", "");
+    });
+    refreshAllButton.addEventListener("click", () => {
+      refreshAll().catch((error) => setNotice(recordNotice, error.message, "error"));
     });
     autoRefreshButton.addEventListener("click", () => setAutoRefresh(!autoRefreshEnabled));
-    jobsContainer.addEventListener("click", handleJobAction);
+    jobsContainer.addEventListener("click", handleActionClick);
+    watchContainer.addEventListener("click", handleActionClick);
 
     setAutoRefresh(true);
-    refreshCookieStatus().catch((error) => setSessionNotice(error.message, "error"));
-    fetchJobs().catch((error) => setNotice(error.message, "error"));
+    refreshAll().catch((error) => setNotice(recordNotice, error.message, "error"));
   </script>
 </body>
 </html>
