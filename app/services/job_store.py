@@ -67,7 +67,7 @@ class JobStore:
         return None
 
     def _read_jobs(self) -> list[RecordingJob]:
-        raw = self.jobs_file.read_text(encoding="utf-8").strip()
+        raw = self.jobs_file.read_text(encoding="utf-8-sig").strip()
         if not raw:
             return []
         data = json.loads(raw)

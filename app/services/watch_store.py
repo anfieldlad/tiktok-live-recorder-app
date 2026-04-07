@@ -59,7 +59,7 @@ class WatchStore:
         return [job for job in self.list_jobs() if job.status in {WatchStatus.watching, WatchStatus.recording}]
 
     def _read_jobs(self) -> list[WatchJob]:
-        raw = self.watch_jobs_file.read_text(encoding="utf-8").strip()
+        raw = self.watch_jobs_file.read_text(encoding="utf-8-sig").strip()
         if not raw:
             return []
         data = json.loads(raw)
