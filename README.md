@@ -3,21 +3,22 @@
 This project is a local app for recording TikTok Live streams.
 
 It includes:
-- a simple browser UI
+- a browser UI with separate `Record Now` and `Watch Mode` pages
 - a FastAPI backend
-- local job tracking and downloads
+- local job tracking, watch tracking, and downloads
 
 UI and backend powered by [`Michele0303/tiktok-live-recorder`](https://github.com/Michele0303/tiktok-live-recorder).
 
 ## What It Does
 
 - record a TikTok Live by username or live URL
+- watch an account and auto-start recording when the live begins
 - show clear recording status in the browser
 - allow only one active recording at a time
 - stop a running recording
 - download the finished file
 - delete the file automatically after download
-- support TikTok session-based access for private or restricted lives
+- support a guided TikTok session flow for private or restricted lives
 
 ## Architecture
 
@@ -138,16 +139,27 @@ vendor/tiktok-live-recorder
 2. Click `Record`.
 3. If the account is live and accessible, a job will be created.
 4. If the account is offline, invalid, or private, the UI will show a clear message.
+5. If the account is offline, the UI can send you directly to `Watch Mode`.
+
+### Watch for a live
+
+1. Open the `Watch Mode` page.
+2. Enter a TikTok username or live URL.
+3. Click `Watch and auto-record`.
+4. The app will keep checking the account.
+5. When the live becomes available, recording will start automatically.
 
 ### Sign in for private or restricted lives
 
 If a live requires authentication:
 
 1. Open the UI.
-2. Use the TikTok session flow in the `TikTok Session` panel.
-3. Sign in with a real browser session.
-4. Capture the session.
-5. Try recording again.
+2. Use the guided `Unlock private lives` flow.
+3. Open a real Chrome or Edge login window.
+4. Sign in to TikTok in that browser.
+5. Close that login window.
+6. Capture the session.
+7. Try recording again.
 
 ### Download a finished file
 
@@ -191,6 +203,43 @@ Optional:
 
 ```http
 GET /recordings
+```
+
+### Create a watch
+
+```http
+POST /watch-recordings
+Content-Type: application/json
+
+{
+  "username": "example_user"
+}
+```
+
+Or:
+
+```json
+{
+  "url": "https://www.tiktok.com/@example/live"
+}
+```
+
+### List watches
+
+```http
+GET /watch-recordings
+```
+
+### Stop a watch
+
+```http
+POST /watch-recordings/{watch_id}/stop
+```
+
+### Delete a watch
+
+```http
+DELETE /watch-recordings/{watch_id}
 ```
 
 ### Get one job
@@ -383,6 +432,7 @@ sudo certbot --nginx -d your-domain.com
 ## Notes
 
 - This app allows only one active recording at a time.
+- Watch mode can monitor multiple accounts, but recording still starts only when the single recording slot is available.
 - The recorder is invoked through subprocess and follows the upstream CLI contract.
 - Finished files are stored locally.
 - Downloading a finished recording removes the file afterward.

@@ -83,6 +83,28 @@ class RecordingJob(BaseModel):
     def is_downloadable(self) -> bool:
         return self.status in {RecordingStatus.finished, RecordingStatus.stopped} and bool(self.file_path)
 
+    def resolved_progress(self) -> RecordingProgress:
+        if self.status == RecordingStatus.finished:
+            return RecordingProgress.ready
+        if self.status == RecordingStatus.failed:
+            return RecordingProgress.failed
+        if self.status == RecordingStatus.stopped:
+            return RecordingProgress.stopped
+        if self.status == RecordingStatus.running:
+            return RecordingProgress.recording
+        return self.progress
+
+    def resolved_progress_message(self) -> str:
+        if self.status == RecordingStatus.finished:
+            return "Recording finished and ready to download."
+        if self.status == RecordingStatus.failed:
+            return self.error or "The recording ended with an error."
+        if self.status == RecordingStatus.stopped:
+            return "Recording stopped."
+        if self.status == RecordingStatus.running:
+            return "Recording is in progress."
+        return self.progress_message
+
 
 class RecordingJobResponse(BaseModel):
     id: str
@@ -114,8 +136,8 @@ class RecordingJobResponse(BaseModel):
             file_size_bytes=Path(job.file_path).stat().st_size if job.file_path and Path(job.file_path).exists() else None,
             pid=job.pid,
             error=job.error,
-            progress=job.progress,
-            progress_message=job.progress_message,
+            progress=job.resolved_progress(),
+            progress_message=job.resolved_progress_message(),
             created_at=job.created_at,
             started_at=job.started_at,
             finished_at=job.finished_at,

@@ -30,22 +30,41 @@
     label,.small { font-size:.9rem; color:var(--muted); }
     input { width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; color:var(--ink); background:rgba(255,255,255,.8); }
     .actions,.job-actions,.split { display:flex; gap:10px; flex-wrap:wrap; }
-    .split,.job-top,.step-head { justify-content:space-between; align-items:start; }
+    .session-header { display:grid; gap:8px; margin-bottom:16px; }
+    .session-header-top { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; }
+    .split,.step-head { justify-content:space-between; align-items:start; }
     .notice { margin-top:12px; border-radius:16px; padding:12px 14px; background:rgba(22,21,18,.05); color:var(--muted); min-height:48px; white-space:pre-wrap; }
     .notice.error { background:rgba(180,59,59,.1); color:#7b2626; }
     .notice.success { background:rgba(23,101,93,.11); color:#144d47; }
-    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; font-size:.84rem; background:rgba(22,21,18,.08); white-space:nowrap; }
+    .pill { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:.74rem; background:rgba(22,21,18,.08); white-space:nowrap; text-align:center; min-width:118px; font-weight:600; }
     .good { background:rgba(23,101,93,.12); color:var(--accent2); }
     .bad { background:rgba(180,59,59,.12); color:var(--danger); }
     .soft { background:rgba(154,106,28,.12); color:var(--warn); }
+    .card { padding:22px; border-radius:22px; background:rgba(255,255,255,.72); }
+    .job-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px 18px; margin-bottom:20px; align-items:start; }
+    .job-identity { display:grid; gap:10px; min-width:0; }
+    .job-name { font-size:1.18rem; line-height:1.08; overflow-wrap:anywhere; }
+    .job-id { display:inline-flex; align-items:center; width:fit-content; max-width:100%; padding:5px 10px; border-radius:999px; background:rgba(22,21,18,.06); color:var(--muted); font-size:.8rem; overflow-wrap:anywhere; }
+    .status-pill { min-width:104px; }
+    .step { padding:20px; }
+    .step-head { margin-bottom:10px; }
     .step-number { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(203,91,55,.12); color:var(--accent); font-size:.86rem; font-weight:700; margin-right:10px; }
     .step-title { display:flex; align-items:center; }
-    .job-meta { display:grid; gap:6px; color:var(--muted); font-size:.94rem; margin:12px 0; }
+    .step-copy { margin-bottom:16px; line-height:1.55; }
+    .step-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .job-meta { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin:0 0 18px; }
+    .meta-card { border:1px solid rgba(22,21,18,.08); border-radius:16px; padding:12px 13px; background:rgba(243,239,230,.55); min-width:0; }
+    .meta-card.wide { grid-column:1 / -1; }
+    .meta-label { margin:0 0 5px; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+    .meta-value { margin:0; font-size:.96rem; line-height:1.4; color:var(--ink); overflow-wrap:anywhere; }
     .empty { border:1px dashed var(--line); border-radius:20px; padding:22px; color:var(--muted); text-align:center; background:rgba(255,255,255,.45); }
     details { margin-top:14px; }
     details summary { cursor:pointer; color:var(--muted); }
     code { background:rgba(22,21,18,.06); border-radius:8px; padding:2px 6px; font-size:.92em; }
     @media (max-width:920px) { .layout { grid-template-columns:1fr; } }
+    @media (max-width:720px) { .job-meta { grid-template-columns:1fr; } .meta-card.wide { grid-column:auto; } }
+    @media (max-width:640px) { .job-top { grid-template-columns:1fr; gap:14px; } .status-pill { justify-self:start; } }
+    @media (max-width:560px) { .session-header-top { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -83,31 +102,31 @@
         </article>
 
         <article class="panel">
-          <div class="split">
-            <div>
+          <div class="session-header">
+            <div class="session-header-top">
               <h2>Unlock private lives</h2>
-              <p class="small">Use this only when a private or restricted live requires your TikTok session.</p>
+              <span id="session-pill" class="pill {{ 'good' if cookies_configured else 'soft' }}">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
             </div>
-            <span id="session-pill" class="pill {{ 'good' if cookies_configured else 'soft' }}">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
+            <p class="small">Use this only when a private or restricted live requires your TikTok session.</p>
           </div>
           <div class="steps">
             <div class="step">
               <div class="step-head"><div class="step-title"><span class="step-number">1</span><h3>Open a login browser</h3></div></div>
-              <p class="small">Open a clean Chrome or Edge window for TikTok sign-in.</p>
-              <div class="actions" style="margin-top:12px;">
+              <p class="small step-copy">Open a clean Chrome or Edge window for TikTok sign-in.</p>
+              <div class="step-actions">
                 <button class="primary" type="button" id="login-chrome">Open Chrome</button>
                 <button class="secondary" type="button" id="login-edge">Open Edge</button>
               </div>
             </div>
             <div class="step">
               <div class="step-head"><div class="step-title"><span class="step-number">2</span><h3>Sign in and close that browser</h3></div></div>
-              <p class="small">Finish the TikTok sign-in flow, then close that login window so the session can be saved safely.</p>
-              <div class="actions" style="margin-top:12px;"><button class="danger" type="button" id="close-login">Close login browser</button></div>
+              <p class="small step-copy">Finish the TikTok sign-in flow, then close that login window so the session can be saved safely.</p>
+              <div class="step-actions"><button class="danger" type="button" id="close-login">Close login browser</button></div>
             </div>
             <div class="step">
               <div class="step-head"><div class="step-title"><span class="step-number">3</span><h3>Capture session</h3></div></div>
-              <p class="small">Save the signed-in TikTok session for private or follower-only lives.</p>
-              <div class="actions" style="margin-top:12px;"><button class="primary" type="button" id="capture-login">Capture session</button></div>
+              <p class="small step-copy">Save the signed-in TikTok session for private or follower-only lives.</p>
+              <div class="step-actions"><button class="primary" type="button" id="capture-login">Capture session</button></div>
             </div>
           </div>
           <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
@@ -185,16 +204,19 @@
       watchContainer.innerHTML = jobs.map((job) => `
         <article class="card">
           <div class="job-top">
-            <div><h3>${job.username || job.url || "-"}</h3><div class="small"><code>${job.id}</code></div></div>
-            <span class="pill ${badgeClass(job.status)}">${job.status}</span>
+            <div class="job-identity">
+              <h3 class="job-name">${job.username || job.url || "-"}</h3>
+              <div class="job-id">${job.id}</div>
+            </div>
+            <span class="pill status-pill ${badgeClass(job.status)}">${job.status}</span>
           </div>
           <div class="job-meta">
-            <div>Latest update: ${job.last_message || "-"}</div>
-            <div>Last checked: ${formatDate(job.last_checked_at)}</div>
-            <div>Created: ${formatDate(job.created_at)}</div>
-            <div>Finished: ${formatDate(job.finished_at)}</div>
-            <div>Duration: ${job.duration ? `${job.duration} seconds` : "Until the live ends"}</div>
-            <div>Linked recording: ${job.linked_recording_job_id || "-"}</div>
+            <div class="meta-card wide"><p class="meta-label">Latest update</p><p class="meta-value">${job.last_message || "-"}</p></div>
+            <div class="meta-card"><p class="meta-label">Last checked</p><p class="meta-value">${formatDate(job.last_checked_at)}</p></div>
+            <div class="meta-card"><p class="meta-label">Created</p><p class="meta-value">${formatDate(job.created_at)}</p></div>
+            <div class="meta-card"><p class="meta-label">Finished</p><p class="meta-value">${formatDate(job.finished_at)}</p></div>
+            <div class="meta-card"><p class="meta-label">Duration</p><p class="meta-value">${job.duration ? `${job.duration} seconds` : "Until the live ends"}</p></div>
+            <div class="meta-card wide"><p class="meta-label">Linked recording</p><p class="meta-value">${job.linked_recording_job_id || "-"}</p></div>
           </div>
           <div class="job-actions">${buildWatchActions(job)}</div>
         </article>`).join("");

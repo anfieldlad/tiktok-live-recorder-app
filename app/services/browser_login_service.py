@@ -28,8 +28,16 @@ class BrowserLoginService:
             "--new-window",
             "https://www.tiktok.com/login",
         ]
-        subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self._write_state({"browser_name": normalized, "profile_dir": str(profile_dir), "browser_open": True})
+        process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self._write_state(
+            {
+                "browser_name": normalized,
+                "profile_dir": str(profile_dir),
+                "browser_open": True,
+                "browser_pid": process.pid,
+                "authenticated": False,
+            }
+        )
         return self.status()
 
     def capture_session(self) -> dict:
@@ -54,6 +62,7 @@ class BrowserLoginService:
             "browser_name": browser_name,
             "profile_dir": str(profile_dir),
             "browser_open": False,
+            "browser_pid": None,
             "authenticated": True,
         }
         self._write_state(updated)
@@ -70,11 +79,19 @@ class BrowserLoginService:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-        self._write_state({"browser_name": None, "profile_dir": None, "browser_open": False, "authenticated": False})
+        self._write_state(
+            {
+                "browser_name": None,
+                "profile_dir": None,
+                "browser_open": False,
+                "browser_pid": None,
+                "authenticated": False,
+            }
+        )
         return self.status()
 
     def status(self) -> dict:
-        state = self._read_state()
+        state = self._normalize_state(self._read_state())
         return {
             "browser_open": bool(state.get("browser_open")),
             "browser_name": state.get("browser_name"),
@@ -100,11 +117,40 @@ class BrowserLoginService:
 
     def _ensure_state(self) -> None:
         if not self.state_file.exists():
-            self._write_state({"browser_name": None, "profile_dir": None, "browser_open": False, "authenticated": False})
+            self._write_state(
+                {
+                    "browser_name": None,
+                    "profile_dir": None,
+                    "browser_open": False,
+                    "browser_pid": None,
+                    "authenticated": False,
+                }
+            )
 
     def _read_state(self) -> dict:
         self._ensure_state()
         return json.loads(self.state_file.read_text(encoding="utf-8"))
+
+    def _normalize_state(self, state: dict) -> dict:
+        browser_open = bool(state.get("browser_open"))
+        browser_pid = state.get("browser_pid")
+        if browser_open and (not browser_pid or not self._is_process_running(int(browser_pid))):
+            state = {
+                **state,
+                "browser_open": False,
+                "browser_pid": None,
+            }
+            self._write_state(state)
+        return state
+
+    def _is_process_running(self, pid: int) -> bool:
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
 
     def _write_state(self, payload: dict) -> None:
         self.state_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
