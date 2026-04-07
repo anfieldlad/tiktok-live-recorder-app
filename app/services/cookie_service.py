@@ -9,8 +9,15 @@ import tempfile
 import time
 from pathlib import Path
 
-import win32crypt
-from Cryptodome.Cipher import AES
+try:
+    import win32crypt  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - platform dependent
+    win32crypt = None
+
+try:
+    from Cryptodome.Cipher import AES
+except ImportError:  # pragma: no cover - optional until browser import is used
+    AES = None
 
 
 class CookieService:
@@ -41,6 +48,7 @@ class CookieService:
         self.cookie_file.write_text(json.dumps(cookies, indent=2) + "\n", encoding="utf-8")
 
     def import_from_browser(self, browser_name: str) -> dict:
+        self._require_windows_browser_import_support()
         browser_paths = {
             "chrome": (
                 Path(os.environ["LOCALAPPDATA"]) / "Google" / "Chrome" / "User Data" / "Local State",
@@ -68,6 +76,7 @@ class CookieService:
         return cookies
 
     def import_from_browser_profile(self, local_state_path: Path, cookies_db_path: Path) -> dict:
+        self._require_windows_browser_import_support()
         if not local_state_path.exists():
             raise ValueError("browser Local State file was not found")
         if not cookies_db_path.exists():
@@ -82,7 +91,14 @@ class CookieService:
     def clear(self) -> None:
         self.cookie_file.write_text("{}\n", encoding="utf-8")
 
+    def _require_windows_browser_import_support(self) -> None:
+        if os.name != "nt":
+            raise ValueError("browser cookie import is currently supported on Windows only")
+        if win32crypt is None or AES is None:
+            raise ValueError("browser cookie import dependencies are not installed")
+
     def _get_chromium_master_key(self, local_state_path: Path) -> bytes:
+        self._require_windows_browser_import_support()
         local_state = json.loads(local_state_path.read_text(encoding="utf-8"))
         encrypted_key_b64 = local_state["os_crypt"]["encrypted_key"]
         encrypted_key = base64.b64decode(encrypted_key_b64)
@@ -125,6 +141,7 @@ class CookieService:
         return cookies
 
     def _decrypt_chromium_cookie(self, encrypted_value: bytes, master_key: bytes) -> str:
+        self._require_windows_browser_import_support()
         if not encrypted_value:
             return ""
         if encrypted_value.startswith(b"v10") or encrypted_value.startswith(b"v11"):
