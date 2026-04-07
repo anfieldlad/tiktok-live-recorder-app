@@ -5,6 +5,7 @@ import os
 import signal
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 from app.models.recording import (
@@ -68,7 +69,13 @@ class RecorderService:
                 }
             ),
         )
-        self._terminate_process(job.pid)
+        with self._lock:
+            process = self._processes.get(job_id)
+        self._terminate_process(
+            process=process,
+            pid=job.pid,
+            grace_seconds=self.settings.process_stop_grace_seconds,
+        )
         self._wait_for_thread_cleanup(job_id)
 
         updated = self.job_store.get_job(job_id)
@@ -93,11 +100,17 @@ class RecorderService:
 
         before = self.file_service.snapshot_output()
         command = self._build_command(job)
+        stdout_log_path = self.settings.logs_dir / f"{job_id}.stdout.log"
+        stderr_log_path = self.settings.logs_dir / f"{job_id}.stderr.log"
         logger.info("Starting recorder command", extra={"job_id": job_id, "command": command})
 
+        stdout_handle = stdout_log_path.open("w", encoding="utf-8")
+        stderr_handle = stderr_log_path.open("w", encoding="utf-8")
         try:
-            process = self._start_process(command)
+            process = self._start_process(command, stdout_handle, stderr_handle)
         except Exception as exc:
+            stdout_handle.close()
+            stderr_handle.close()
             self.job_store.update_job(
                 job_id,
                 lambda current: current.model_copy(
@@ -127,7 +140,30 @@ class RecorderService:
             }
         ))
 
-        stdout, stderr = process.communicate()
+        timed_out = False
+        deadline = time.monotonic() + job.duration if job.duration else None
+        while True:
+            try:
+                return_code = process.wait(timeout=1)
+                break
+            except subprocess.TimeoutExpired:
+                if deadline is not None and time.monotonic() >= deadline:
+                    timed_out = True
+                    self._terminate_process(
+                        process=process,
+                        pid=process.pid,
+                        grace_seconds=self.settings.process_stop_grace_seconds,
+                    )
+                    try:
+                        return_code = process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        return_code = process.poll() if process.poll() is not None else -9
+                    break
+
+        stdout_handle.close()
+        stderr_handle.close()
+        stdout = self._read_log_tail(stdout_log_path)
+        stderr = self._read_log_tail(stderr_log_path)
         self.job_store.update_job(
             job_id,
             lambda current: current.model_copy(
@@ -139,12 +175,19 @@ class RecorderService:
         )
         after = self.file_service.snapshot_output()
         detected_file = self.file_service.detect_output_file(before, after)
-        return_code = process.returncode
+        temp_artifact_detected = bool(detected_file and "_flv" in detected_file.stem.lower())
+        if process.returncode is not None:
+            return_code = process.returncode
 
         with self._lock:
             self._processes.pop(job_id, None)
 
-        if return_code == 0:
+        if timed_out:
+            status = RecordingStatus.finished
+            progress = RecordingProgress.ready
+            progress_message = "Recording reached the requested duration and is ready to download."
+            error = None
+        elif return_code == 0:
             status = RecordingStatus.finished
             progress = RecordingProgress.ready
             progress_message = "Recording finished and ready to download."
@@ -156,6 +199,12 @@ class RecorderService:
             progress_message = "Recording stopped." if status == RecordingStatus.stopped else "The recording ended with an error."
             error = stderr.strip() or stdout.strip() or f"recorder exited with code {return_code}"
 
+        if status == RecordingStatus.stopped and detected_file is not None and not temp_artifact_detected:
+            status = RecordingStatus.finished
+            progress = RecordingProgress.ready
+            progress_message = "Recording stopped and saved."
+            error = None
+
         if status == RecordingStatus.stopped and detected_file is None:
             status = RecordingStatus.failed
             progress = RecordingProgress.failed
@@ -163,11 +212,25 @@ class RecorderService:
             error = error or "recording stopped before output file was created"
 
         file_path = str(detected_file) if detected_file else None
-        if return_code == 0 and not file_path:
+        if detected_file and temp_artifact_detected:
+            was_manual_stop = status == RecordingStatus.stopped
+            file_path = None
+            status = RecordingStatus.failed
+            progress = RecordingProgress.failed
+            if was_manual_stop:
+                progress_message = "The recording stopped before the video could be finalized."
+                error = error or "recorder stopped before finalizing the video"
+            else:
+                progress_message = "The recording ended before the video could be finalized."
+                error = error or "recorder left only a temporary output file"
+        if (return_code == 0 or timed_out) and not file_path:
             status = RecordingStatus.failed
             progress = RecordingProgress.failed
             progress_message = "The recording finished, but no file was created."
             error = "recorder finished but no output file was detected"
+
+        if file_path:
+            self.file_service.cleanup_temporary_variants(Path(file_path))
 
         self.job_store.update_job(
             job_id,
@@ -207,12 +270,17 @@ class RecorderService:
             command.append("-no-update-check")
         return command
 
-    def _start_process(self, command: list[str]) -> subprocess.Popen[str]:
+    def _start_process(
+        self,
+        command: list[str],
+        stdout_handle: object,
+        stderr_handle: object,
+    ) -> subprocess.Popen[str]:
         kwargs: dict[str, object] = {
             "args": command,
             "cwd": str(self.settings.recorder_dir),
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.PIPE,
+            "stdout": stdout_handle,
+            "stderr": stderr_handle,
             "text": True,
         }
         if os.name == "nt":
@@ -221,10 +289,36 @@ class RecorderService:
             kwargs["preexec_fn"] = os.setsid
         return subprocess.Popen(**kwargs)
 
-    def _terminate_process(self, pid: int) -> None:
+    def _read_log_tail(self, path: Path, max_chars: int = 4000) -> str:
+        if not path.exists():
+            return ""
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if len(text) <= max_chars:
+            return text.strip()
+        return text[-max_chars:].strip()
+
+    def _terminate_process(
+        self,
+        *,
+        process: subprocess.Popen[str] | None = None,
+        pid: int | None = None,
+        grace_seconds: int | None = None,
+    ) -> None:
+        target_pid = pid or (process.pid if process else None)
+        if target_pid is None:
+            return
+        grace = grace_seconds if grace_seconds is not None else self.settings.process_stop_grace_seconds
+
         if os.name == "nt":
+            if process and process.poll() is None:
+                try:
+                    process.send_signal(signal.CTRL_BREAK_EVENT)
+                    process.wait(timeout=grace)
+                    return
+                except (subprocess.TimeoutExpired, OSError, ValueError):
+                    pass
             subprocess.run(
-                ["taskkill", "/PID", str(pid), "/T"],
+                ["taskkill", "/PID", str(target_pid), "/T", "/F"],
                 check=False,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -232,7 +326,24 @@ class RecorderService:
             return
 
         try:
-            os.killpg(os.getpgid(pid), signal.SIGTERM)
+            pgid = os.getpgid(target_pid)
+        except ProcessLookupError:
+            return
+
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+
+        end_time = time.monotonic() + max(grace, 0)
+        while process and process.poll() is None and time.monotonic() < end_time:
+            time.sleep(0.2)
+
+        if process and process.poll() is not None:
+            return
+
+        try:
+            os.killpg(pgid, signal.SIGKILL)
         except ProcessLookupError:
             return
 

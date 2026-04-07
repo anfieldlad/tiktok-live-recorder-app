@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     skip_update_check: bool = True
     cleanup_max_age_hours: int = 3
     watch_poll_interval_seconds: int = 45
+    process_stop_grace_seconds: int = 12
 
     def ensure_directories(self) -> None:
         self.jobs_file.parent.mkdir(parents=True, exist_ok=True)

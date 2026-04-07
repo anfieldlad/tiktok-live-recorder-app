@@ -22,10 +22,29 @@ class FileService:
         return {path.resolve() for path in self.output_dir.glob("*") if path.is_file()}
 
     def detect_output_file(self, before: set[Path], after: set[Path]) -> Path | None:
-        new_files = list(after - before)
-        if not new_files:
+        return self.choose_recording_file(after - before)
+
+    def choose_recording_file(self, files: set[Path] | list[Path]) -> Path | None:
+        candidates = [path for path in files if path.is_file()]
+        if not candidates:
             return None
-        return max(new_files, key=lambda path: path.stat().st_mtime)
+
+        def sort_key(path: Path) -> tuple[int, float]:
+            # Prefer finalized outputs over temporary recorder artifacts like *_flv.mp4.
+            is_temp = 1 if "_flv" in path.stem.lower() else 0
+            return (is_temp, -path.stat().st_mtime)
+
+        return min(candidates, key=sort_key)
+
+    def cleanup_temporary_variants(self, recording_file: Path) -> list[str]:
+        deleted: list[str] = []
+        temp_stem = f"{recording_file.stem}_flv"
+        for candidate in self.output_dir.glob(f"{temp_stem}*"):
+            if not candidate.is_file():
+                continue
+            candidate.unlink(missing_ok=True)
+            deleted.append(str(candidate))
+        return deleted
 
     def resolve_job_file(self, job: RecordingJob) -> Path:
         if not job.file_path:
