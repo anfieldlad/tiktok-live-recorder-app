@@ -67,22 +67,30 @@ def create_app() -> FastAPI:
     app.include_router(recordings_router)
     app.include_router(watch_router)
 
-    @app.get("/", response_class=HTMLResponse)
-    def index(request: Request) -> HTMLResponse:
+    def render_dashboard(request: Request, template_name: str, page_name: str) -> HTMLResponse:
         jobs = [job.model_dump(mode="json") for job in job_store.list_jobs()]
         watch_jobs = [job.model_dump(mode="json") for job in watch_store.list_jobs()]
         return templates.TemplateResponse(
             request,
-            "index.html",
+            template_name,
             {
                 "request": request,
                 "jobs": jobs,
                 "watch_jobs": watch_jobs,
+                "page_name": page_name,
                 "settings": settings,
                 "cookies_configured": cookie_service.is_configured(),
                 "browser_login_status": browser_login_service.status(),
             },
         )
+
+    @app.get("/", response_class=HTMLResponse)
+    def index(request: Request) -> HTMLResponse:
+        return render_dashboard(request, "record.html", "record")
+
+    @app.get("/watch", response_class=HTMLResponse)
+    def watch_page(request: Request) -> HTMLResponse:
+        return render_dashboard(request, "watch.html", "watch")
 
     @app.get("/health")
     def health() -> dict[str, str]:

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Live Recorder App</title>
+  <style>
+    :root { --bg:#f3efe6; --panel:rgba(255,252,246,.95); --ink:#161512; --muted:#625c54; --line:rgba(22,21,18,.12); --accent:#cb5b37; --accent2:#17655d; --danger:#b43b3b; --warn:#9a6a1c; --shadow:0 20px 60px rgba(22,21,18,.09); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:radial-gradient(circle at top left, rgba(203,91,55,.17), transparent 28%), radial-gradient(circle at right, rgba(23,101,93,.14), transparent 22%), linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%); padding:28px 18px 42px; }
+    .wrap { max-width:1120px; margin:0 auto; }
+    .hero,.panel,.card,.step { background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:var(--shadow); }
+    .hero,.panel,.card,.step { padding:24px; }
+    .hero { margin-bottom:20px; }
+    .eyebrow { margin:0 0 10px; font-size:.75rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+    h1 { margin:0 0 12px; font-size:clamp(2rem, 4vw, 3.8rem); line-height:.95; }
+    h2 { margin:0 0 10px; font-size:1.16rem; }
+    h3 { margin:0; font-size:1rem; }
+    p { margin:0; color:var(--muted); line-height:1.65; }
+    .nav { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+    .nav a,.button-link,button { border:0; border-radius:999px; padding:11px 16px; font:inherit; text-decoration:none; cursor:pointer; transition:transform 140ms ease, opacity 140ms ease; }
+    .nav a:hover,.button-link:hover,button:hover { transform:translateY(-1px); }
+    .nav a.active,.primary,.button-link.primary { background:var(--accent); color:#fffaf6; }
+    .nav a,.secondary { background:rgba(22,21,18,.08); color:var(--ink); }
+    .danger { background:rgba(180,59,59,.12); color:var(--danger); }
+    .warn { background:rgba(154,106,28,.12); color:var(--warn); }
+    .layout { display:grid; gap:20px; grid-template-columns:minmax(320px,380px) 1fr; align-items:start; }
+    .stack,.watch-list,.steps { display:grid; gap:20px; }
+    .field { display:grid; gap:7px; margin-bottom:14px; }
+    label,.small { font-size:.9rem; color:var(--muted); }
+    input { width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; color:var(--ink); background:rgba(255,255,255,.8); }
+    .actions,.job-actions,.split { display:flex; gap:10px; flex-wrap:wrap; }
+    .split,.job-top,.step-head { justify-content:space-between; align-items:start; }
+    .notice { margin-top:12px; border-radius:16px; padding:12px 14px; background:rgba(22,21,18,.05); color:var(--muted); min-height:48px; white-space:pre-wrap; }
+    .notice.error { background:rgba(180,59,59,.1); color:#7b2626; }
+    .notice.success { background:rgba(23,101,93,.11); color:#144d47; }
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; font-size:.84rem; background:rgba(22,21,18,.08); white-space:nowrap; }
+    .good { background:rgba(23,101,93,.12); color:var(--accent2); }
+    .bad { background:rgba(180,59,59,.12); color:var(--danger); }
+    .soft { background:rgba(154,106,28,.12); color:var(--warn); }
+    .step-number { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(203,91,55,.12); color:var(--accent); font-size:.86rem; font-weight:700; margin-right:10px; }
+    .step-title { display:flex; align-items:center; }
+    .job-meta { display:grid; gap:6px; color:var(--muted); font-size:.94rem; margin:12px 0; }
+    .empty { border:1px dashed var(--line); border-radius:20px; padding:22px; color:var(--muted); text-align:center; background:rgba(255,255,255,.45); }
+    details { margin-top:14px; }
+    details summary { cursor:pointer; color:var(--muted); }
+    code { background:rgba(22,21,18,.06); border-radius:8px; padding:2px 6px; font-size:.92em; }
+    @media (max-width:920px) { .layout { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">Watch Mode</p>
+      <h1>TikTok Live Recorder App</h1>
+      <p>Keep checking a creator until they go live, then start the recording automatically.</p>
+      <nav class="nav">
+        <a href="/">Record Now</a>
+        <a class="active" href="/watch">Watch Mode</a>
+      </nav>
+    </section>
+
+    <section class="layout">
+      <div class="stack">
+        <article class="panel">
+          <h2>Watch mode</h2>
+          <p class="small">Use this when the creator is offline now. The app will keep checking until the live becomes available.</p>
+          <form id="watch-form" style="margin-top:16px;">
+            <div class="field">
+              <label for="watch-source">TikTok username or live URL</label>
+              <input id="watch-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
+            </div>
+            <div class="field">
+              <label for="watch-duration">Duration in seconds (optional)</label>
+              <input id="watch-duration" type="number" min="1" placeholder="Leave blank to record until the live ends">
+            </div>
+            <div class="actions">
+              <button class="primary" type="submit">Watch and auto-record</button>
+              <button class="secondary" type="button" id="clear-watch-form">Clear</button>
+            </div>
+          </form>
+          <div id="watch-notice" class="notice">Create a watch to keep checking an account until the live becomes available.</div>
+        </article>
+
+        <article class="panel">
+          <div class="split">
+            <div>
+              <h2>Unlock private lives</h2>
+              <p class="small">Use this only when a private or restricted live requires your TikTok session.</p>
+            </div>
+            <span id="session-pill" class="pill {{ 'good' if cookies_configured else 'soft' }}">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="step-head"><div class="step-title"><span class="step-number">1</span><h3>Open a login browser</h3></div></div>
+              <p class="small">Open a clean Chrome or Edge window for TikTok sign-in.</p>
+              <div class="actions" style="margin-top:12px;">
+                <button class="primary" type="button" id="login-chrome">Open Chrome</button>
+                <button class="secondary" type="button" id="login-edge">Open Edge</button>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-head"><div class="step-title"><span class="step-number">2</span><h3>Sign in and close that browser</h3></div></div>
+              <p class="small">Finish the TikTok sign-in flow, then close that login window so the session can be saved safely.</p>
+              <div class="actions" style="margin-top:12px;"><button class="danger" type="button" id="close-login">Close login browser</button></div>
+            </div>
+            <div class="step">
+              <div class="step-head"><div class="step-title"><span class="step-number">3</span><h3>Capture session</h3></div></div>
+              <p class="small">Save the signed-in TikTok session for private or follower-only lives.</p>
+              <div class="actions" style="margin-top:12px;"><button class="primary" type="button" id="capture-login">Capture session</button></div>
+            </div>
+          </div>
+          <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
+          <details>
+            <summary>Advanced session options</summary>
+            <form id="cookies-form" style="margin-top:14px;">
+              <div class="field">
+                <label for="session-ss">session_ss</label>
+                <input id="session-ss" type="text" placeholder="Paste session_ss here">
+              </div>
+              <div class="actions">
+                <button class="primary" type="submit">Save session manually</button>
+                <button class="secondary" type="button" id="import-chrome">Import Chrome</button>
+                <button class="secondary" type="button" id="import-edge">Import Edge</button>
+                <button class="danger" type="button" id="clear-cookies">Clear session</button>
+              </div>
+            </form>
+          </details>
+        </article>
+      </div>
+
+      <article class="panel">
+        <div class="split" style="margin-bottom:14px;">
+          <div>
+            <h2>Watch list</h2>
+            <p class="small">These watches keep checking TikTok until a live starts or you stop them.</p>
+          </div>
+          <div class="actions"><button class="secondary" type="button" id="refresh-watch-list">Refresh</button></div>
+        </div>
+        <div id="watch-container" class="watch-list"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const watchContainer = document.getElementById("watch-container");
+    const watchForm = document.getElementById("watch-form");
+    const watchNotice = document.getElementById("watch-notice");
+    const sessionNotice = document.getElementById("session-notice");
+    const clearWatchFormButton = document.getElementById("clear-watch-form");
+    const cookiesForm = document.getElementById("cookies-form");
+    const clearCookiesButton = document.getElementById("clear-cookies");
+    const importChromeButton = document.getElementById("import-chrome");
+    const importEdgeButton = document.getElementById("import-edge");
+    const sessionPill = document.getElementById("session-pill");
+    const loginChromeButton = document.getElementById("login-chrome");
+    const loginEdgeButton = document.getElementById("login-edge");
+    const captureLoginButton = document.getElementById("capture-login");
+    const closeLoginButton = document.getElementById("close-login");
+    const refreshWatchListButton = document.getElementById("refresh-watch-list");
+
+    function setNotice(el, message, type = "") { el.textContent = message; el.className = `notice ${type}`.trim(); }
+    function formatDate(value) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }
+    function badgeClass(value) { if (value === "completed") return "good"; if (value === "failed" || value === "stopped") return "bad"; return "soft"; }
+    function buildSourcePayload() {
+      const source = document.getElementById("watch-source").value.trim();
+      const duration = document.getElementById("watch-duration").value.trim();
+      const payload = {};
+      if (source) {
+        const normalized = source.replace(/^@+/, "").trim();
+        const isUrl = /^https?:\/\//i.test(source) || source.includes("tiktok.com/");
+        if (isUrl) payload.url = source; else payload.username = normalized;
+      }
+      if (duration) payload.duration = Number(duration);
+      return payload;
+    }
+    function buildWatchActions(job) {
+      const actions = [];
+      if (job.status === "watching" || job.status === "recording") actions.push(`<button class="warn" data-action="stop" data-id="${job.id}">Stop watch</button>`);
+      actions.push(`<button class="danger" data-action="delete" data-id="${job.id}">Delete</button>`);
+      return actions.join("");
+    }
+    function renderWatchJobs(jobs) {
+      if (!jobs.length) { watchContainer.innerHTML = '<div class="empty">No watches yet. Create one when you want the app to wait for a live and start automatically.</div>'; return; }
+      watchContainer.innerHTML = jobs.map((job) => `
+        <article class="card">
+          <div class="job-top">
+            <div><h3>${job.username || job.url || "-"}</h3><div class="small"><code>${job.id}</code></div></div>
+            <span class="pill ${badgeClass(job.status)}">${job.status}</span>
+          </div>
+          <div class="job-meta">
+            <div>Latest update: ${job.last_message || "-"}</div>
+            <div>Last checked: ${formatDate(job.last_checked_at)}</div>
+            <div>Created: ${formatDate(job.created_at)}</div>
+            <div>Finished: ${formatDate(job.finished_at)}</div>
+            <div>Duration: ${job.duration ? `${job.duration} seconds` : "Until the live ends"}</div>
+            <div>Linked recording: ${job.linked_recording_job_id || "-"}</div>
+          </div>
+          <div class="job-actions">${buildWatchActions(job)}</div>
+        </article>`).join("");
+    }
+    async function fetchWatchJobs() {
+      const response = await fetch("/watch-recordings");
+      if (!response.ok) throw new Error(`Failed to load watch jobs: ${response.status}`);
+      renderWatchJobs(await response.json());
+    }
+    async function refreshSessionStatus() {
+      const [cookieResponse, loginResponse] = await Promise.all([fetch("/auth/status"), fetch("/auth/login-browser/status")]);
+      if (!cookieResponse.ok || !loginResponse.ok) throw new Error("Failed to load TikTok session status");
+      const cookieBody = await cookieResponse.json();
+      const loginBody = await loginResponse.json();
+      sessionPill.textContent = cookieBody.configured ? "Session ready" : "Session needed";
+      sessionPill.className = `pill ${cookieBody.configured ? "good" : "soft"}`;
+      if (cookieBody.configured) setNotice(sessionNotice, "Your TikTok session is ready.", "success");
+      else if (loginBody.browser_open) setNotice(sessionNotice, "The TikTok login window is open. Finish signing in there, then close it and click Capture session.");
+      else setNotice(sessionNotice, "No TikTok session is saved yet. You only need this for private or restricted lives.");
+    }
+    function hydrateFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const source = params.get("source");
+      const duration = params.get("duration");
+      if (source) document.getElementById("watch-source").value = source;
+      if (duration) document.getElementById("watch-duration").value = duration;
+      if (source) setNotice(watchNotice, "The creator is offline right now. You can start watch mode here instead.");
+    }
+    async function submitWatch(event) {
+      event.preventDefault();
+      const payload = buildSourcePayload();
+      setNotice(watchNotice, "Creating a watch and checking the account...");
+      try {
+        const response = await fetch("/watch-recordings", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't create the watch.");
+        setNotice(watchNotice, "Watch mode is active. Recording will start automatically when the live becomes available.", "success");
+        watchForm.reset();
+        await fetchWatchJobs();
+      } catch (error) { setNotice(watchNotice, error.message, "error"); }
+    }
+    async function saveCookies(event) {
+      event.preventDefault();
+      const sessionValue = document.getElementById("session-ss").value.trim();
+      if (!sessionValue) { setNotice(sessionNotice, "Please enter a session_ss value.", "error"); return; }
+      try {
+        const response = await fetch("/auth/tiktok-cookies", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ session_ss: sessionValue }) });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't save the TikTok session.");
+        document.getElementById("session-ss").value = "";
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "TikTok session saved.", "success");
+      } catch (error) { setNotice(sessionNotice, error.message, "error"); }
+    }
+    async function clearCookies() {
+      try {
+        const response = await fetch("/auth/tiktok-cookies", { method:"DELETE" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't clear the TikTok session.");
+        document.getElementById("session-ss").value = "";
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "TikTok session cleared.", "success");
+      } catch (error) { setNotice(sessionNotice, error.message, "error"); }
+    }
+    async function importCookies(browserName) {
+      try {
+        setNotice(sessionNotice, `Importing TikTok session from ${browserName}...`);
+        const response = await fetch(`/auth/import-browser/${browserName}`, { method:"POST" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || `Couldn't import cookies from ${browserName}.`);
+        await refreshSessionStatus();
+        setNotice(sessionNotice, `TikTok session imported from ${browserName}.`, "success");
+      } catch (error) { setNotice(sessionNotice, error.message, "error"); }
+    }
+    async function startBrowserLogin(browserName) {
+      try {
+        setNotice(sessionNotice, `Opening a TikTok login window in ${browserName}...`);
+        const response = await fetch(`/auth/login-browser/${browserName}/start`, { method:"POST" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || `Couldn't open the login browser in ${browserName}.`);
+        await refreshSessionStatus();
+        setNotice(sessionNotice, `The TikTok login window is open in ${browserName}. Finish signing in there, then close that window and click Capture session.`, "success");
+      } catch (error) { setNotice(sessionNotice, error.message, "error"); }
+    }
+    async function captureBrowserLogin() {
+      try {
+        setNotice(sessionNotice, "Capturing the TikTok session...");
+        const response = await fetch("/auth/login-browser/capture", { method:"POST" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't capture the TikTok session.");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "TikTok session captured and saved.", "success");
+      } catch (error) { setNotice(sessionNotice, error.message, "error"); }
+    }
+    async function closeBrowserLogin() {
+      try {
+        const response = await fetch("/auth/login-browser/close", { method:"POST" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Couldn't close the login browser.");
+        await refreshSessionStatus();
+        setNotice(sessionNotice, "Login browser closed.", "success");
+      } catch (error) { setNotice(sessionNotice, error.message, "error"); }
+    }
+    async function handleWatchAction(event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const action = button.dataset.action;
+      const watchId = button.dataset.id;
+      button.disabled = true;
+      try {
+        const response = await fetch(action === "stop" ? `/watch-recordings/${watchId}/stop` : `/watch-recordings/${watchId}`, { method: action === "stop" ? "POST" : "DELETE" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "The action could not be completed.");
+        setNotice(watchNotice, "Watch list updated.", "success");
+        await fetchWatchJobs();
+      } catch (error) { setNotice(watchNotice, error.message, "error"); }
+      finally { button.disabled = false; }
+    }
+    watchForm.addEventListener("submit", submitWatch);
+    cookiesForm.addEventListener("submit", saveCookies);
+    clearCookiesButton.addEventListener("click", clearCookies);
+    importChromeButton.addEventListener("click", () => importCookies("chrome"));
+    importEdgeButton.addEventListener("click", () => importCookies("edge"));
+    loginChromeButton.addEventListener("click", () => startBrowserLogin("chrome"));
+    loginEdgeButton.addEventListener("click", () => startBrowserLogin("edge"));
+    captureLoginButton.addEventListener("click", captureBrowserLogin);
+    closeLoginButton.addEventListener("click", closeBrowserLogin);
+    clearWatchFormButton.addEventListener("click", () => { watchForm.reset(); setNotice(watchNotice, "Watch form cleared."); });
+    refreshWatchListButton.addEventListener("click", () => { fetchWatchJobs().catch((error) => setNotice(watchNotice, error.message, "error")); });
+    watchContainer.addEventListener("click", handleWatchAction);
+    hydrateFromQuery();
+    refreshSessionStatus().catch((error) => setNotice(sessionNotice, error.message, "error"));
+    fetchWatchJobs().catch((error) => setNotice(watchNotice, error.message, "error"));
+  </script>
+</body>
+</html>
