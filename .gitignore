@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+
+# Local environment
+.env
+
+# Runtime data
+logs/
+output/
+tools/
+
+# Local app state
+data/browser-login/
+
+# Upstream recorder clone
+vendor/tiktok-live-recorder/

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Live Recorder App</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3efe6;
+      --panel: rgba(255, 252, 246, 0.95);
+      --ink: #161512;
+      --muted: #625c54;
+      --line: rgba(22, 21, 18, 0.12);
+      --accent: #cb5b37;
+      --accent-2: #17655d;
+      --danger: #b43b3b;
+      --warn: #9a6a1c;
+      --shadow: 0 20px 60px rgba(22, 21, 18, 0.09);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(203, 91, 55, 0.17), transparent 28%),
+        radial-gradient(circle at right, rgba(23, 101, 93, 0.14), transparent 22%),
+        linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
+      padding: 28px 18px 42px;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .hero,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3.8rem);
+      line-height: 0.95;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .layout {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: 360px 1fr;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.12rem;
+    }
+
+    .stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    input:focus {
+      outline: 2px solid rgba(23, 101, 93, 0.18);
+      border-color: rgba(23, 101, 93, 0.35);
+    }
+
+    .actions,
+    .toolbar,
+    .job-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    .button-link {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+    }
+
+    button:hover,
+    .button-link:hover {
+      transform: translateY(-1px);
+    }
+
+    button.primary,
+    .button-link.primary {
+      background: var(--accent);
+      color: #fffaf6;
+    }
+
+    button.secondary,
+    .button-link.secondary {
+      background: rgba(22, 21, 18, 0.08);
+      color: var(--ink);
+    }
+
+    button.danger {
+      background: rgba(180, 59, 59, 0.12);
+      color: var(--danger);
+    }
+
+    button.warn {
+      background: rgba(154, 106, 28, 0.12);
+      color: var(--warn);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    code {
+      background: rgba(22, 21, 18, 0.06);
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-size: 0.92em;
+    }
+
+    .notice {
+      margin-top: 12px;
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(22, 21, 18, 0.05);
+      color: var(--muted);
+      min-height: 48px;
+      white-space: pre-wrap;
+    }
+
+    .notice.error {
+      background: rgba(180, 59, 59, 0.1);
+      color: #7b2626;
+    }
+
+    .notice.success {
+      background: rgba(23, 101, 93, 0.11);
+      color: #144d47;
+    }
+
+    details {
+      margin-top: 14px;
+    }
+
+    details summary {
+      cursor: pointer;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .compact-actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .compact-actions button {
+      width: 100%;
+    }
+
+    .jobs {
+      display: grid;
+      gap: 14px;
+    }
+
+    .job-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.66);
+    }
+
+    .job-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .job-title {
+      margin: 0;
+      font-size: 1.02rem;
+      overflow-wrap: anywhere;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      background: rgba(22, 21, 18, 0.08);
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .status.running,
+    .status.queued {
+      background: rgba(154, 106, 28, 0.12);
+      color: var(--warn);
+    }
+
+    .status.finished,
+    .status.stopped {
+      background: rgba(23, 101, 93, 0.12);
+      color: var(--accent-2);
+    }
+
+    .status.failed {
+      background: rgba(180, 59, 59, 0.12);
+      color: var(--danger);
+    }
+
+    .job-meta {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-bottom: 12px;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    .small {
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">Local Dashboard</p>
+      <h1>TikTok Live Recorder App</h1>
+      <p>
+        Run recordings locally, track progress in the browser, and download completed files when they are ready.
+        Powered by <code>Michele0303/tiktok-live-recorder</code>.
+      </p>
+    </section>
+
+    <section class="layout">
+      <div class="stack">
+        <article class="panel">
+          <h2>Record</h2>
+          <form id="recording-form">
+            <div class="field">
+              <label for="username">TikTok username</label>
+              <input id="username" name="username" type="text" placeholder="example_creator">
+            </div>
+
+            <div class="field">
+              <label for="url">Or TikTok live URL</label>
+              <input id="url" name="url" type="url" placeholder="https://www.tiktok.com/@user/live">
+            </div>
+
+            <div class="field">
+              <label for="duration">Duration in seconds (optional)</label>
+              <input id="duration" name="duration" type="number" min="1" placeholder="for example 120">
+            </div>
+
+            <div class="actions">
+              <button class="primary" type="submit">Record</button>
+              <button class="secondary" type="button" id="clear-form">Clear</button>
+            </div>
+          </form>
+          <div id="form-notice" class="notice">Enter a username or live URL, then click Record. If the account is offline, private, or invalid, you'll see the reason here.</div>
+        </article>
+
+        <article class="panel">
+          <h2>TikTok Session</h2>
+          <div class="meta" style="margin-bottom: 14px;">
+            <div>Status: <strong id="cookie-status-text">{{ "Configured" if cookies_configured else "Not configured" }}</strong></div>
+            <div>Browser login: <strong id="browser-login-status">{{ "Open" if browser_login_status.browser_open else "Closed" }}</strong></div>
+            <div class="small">Recommended flow: open the login browser, sign in to TikTok, close that browser, then capture the session.</div>
+          </div>
+          <div class="compact-actions">
+            <button class="primary" type="button" id="login-chrome">1. Login with Chrome</button>
+            <button class="primary" type="button" id="login-edge">1. Login with Edge</button>
+            <button class="secondary" type="button" id="capture-login">2. Capture Login Session</button>
+            <button class="danger" type="button" id="close-login">Close Login Browser</button>
+          </div>
+          <div id="session-notice" class="notice">No TikTok session is saved yet. Use the login flow above if you need access to private or restricted lives.</div>
+
+          <details>
+            <summary>Advanced options</summary>
+            <form id="cookies-form" style="margin-top: 14px;">
+              <div class="field">
+                <label for="session-ss">session_ss</label>
+                <input id="session-ss" name="session_ss" type="text" placeholder="Paste session_ss here">
+              </div>
+              <div class="actions">
+                <button class="primary" type="submit">Save Session</button>
+                <button class="secondary" type="button" id="import-chrome">Import Chrome</button>
+                <button class="secondary" type="button" id="import-edge">Import Edge</button>
+                <button class="danger" type="button" id="clear-cookies">Clear Session</button>
+              </div>
+            </form>
+          </details>
+        </article>
+
+        <article class="panel">
+          <h2>Environment</h2>
+          <div class="meta">
+            <div>Recorder dir: <code>{{ settings.recorder_dir }}</code></div>
+            <div>Entrypoint: <code>{{ settings.recorder_entrypoint }}</code></div>
+            <div>Cookies file: <code>{{ settings.recorder_cookies_file }}</code></div>
+            <div>Output dir: <code>{{ settings.output_dir }}</code></div>
+            <div>Jobs file: <code>{{ settings.jobs_file }}</code></div>
+          </div>
+        </article>
+      </div>
+
+      <article class="panel">
+        <div class="toolbar" style="justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h2 style="margin: 0;">Jobs</h2>
+          <div class="actions">
+            <button class="secondary" type="button" id="refresh-jobs">Refresh</button>
+            <button class="secondary" type="button" id="toggle-auto-refresh">Auto Refresh: On</button>
+          </div>
+        </div>
+
+        <div id="jobs-container" class="jobs">
+          {% if jobs %}
+            {% for job in jobs %}
+              <article class="job-card">
+                <div class="job-top">
+                  <div>
+                    <h3 class="job-title">{{ job.username or job.url }}</h3>
+                    <div class="small"><code>{{ job.id }}</code></div>
+                  </div>
+                  <span class="status {{ job.status }}">{{ job.status }}</span>
+                </div>
+                <div class="job-meta">
+                  <div>Created: {{ job.created_at }}</div>
+                  <div>File: {{ job.file_path or "-" }}</div>
+                </div>
+              </article>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No recordings yet. Start with the form on the left.</div>
+          {% endif %}
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const jobsContainer = document.getElementById("jobs-container");
+    const form = document.getElementById("recording-form");
+    const formNotice = document.getElementById("form-notice");
+    const sessionNotice = document.getElementById("session-notice");
+    const clearFormButton = document.getElementById("clear-form");
+    const cookiesForm = document.getElementById("cookies-form");
+    const clearCookiesButton = document.getElementById("clear-cookies");
+    const importChromeButton = document.getElementById("import-chrome");
+    const importEdgeButton = document.getElementById("import-edge");
+    const cookieStatusText = document.getElementById("cookie-status-text");
+    const browserLoginStatus = document.getElementById("browser-login-status");
+    const loginChromeButton = document.getElementById("login-chrome");
+    const loginEdgeButton = document.getElementById("login-edge");
+    const captureLoginButton = document.getElementById("capture-login");
+    const closeLoginButton = document.getElementById("close-login");
+    const refreshButton = document.getElementById("refresh-jobs");
+    const autoRefreshButton = document.getElementById("toggle-auto-refresh");
+
+    let autoRefreshEnabled = true;
+    let refreshTimer = null;
+
+    function setNotice(message, type = "") {
+      formNotice.textContent = message;
+      formNotice.className = `notice ${type}`.trim();
+    }
+
+    function setSessionNotice(message, type = "") {
+      sessionNotice.textContent = message;
+      sessionNotice.className = `notice ${type}`.trim();
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString();
+    }
+
+    function buildJobActions(job) {
+      const actions = [];
+
+      if (job.status === "running") {
+        actions.push(`<button class="warn" data-action="stop" data-id="${job.id}">Stop</button>`);
+      }
+
+      if ((job.status === "finished" || job.status === "stopped") && job.file_path) {
+        actions.push(`<a class="button-link primary" href="/recordings/${job.id}/download">Download</a>`);
+      }
+
+      actions.push(`<button class="danger" data-action="delete" data-id="${job.id}">Delete</button>`);
+      return actions.join("");
+    }
+
+    function renderJobs(jobs) {
+      if (!jobs.length) {
+        jobsContainer.innerHTML = '<div class="empty">No recordings yet. Start with the form on the left.</div>';
+        return;
+      }
+
+      jobsContainer.innerHTML = jobs.map((job) => `
+        <article class="job-card">
+          <div class="job-top">
+            <div>
+              <h3 class="job-title">${job.username || job.url || "-"}</h3>
+              <div class="small"><code>${job.id}</code></div>
+            </div>
+            <span class="status ${job.status}">${job.status}</span>
+          </div>
+
+          <div class="job-meta">
+            <div>Created: ${formatDate(job.created_at)}</div>
+            <div>Started: ${formatDate(job.started_at)}</div>
+            <div>Finished: ${formatDate(job.finished_at)}</div>
+            <div>Duration: ${job.duration ?? "-"}</div>
+            <div>File: ${job.file_path || "-"}</div>
+            <div>Error: ${job.error || "-"}</div>
+          </div>
+
+          <div class="job-actions">
+            ${buildJobActions(job)}
+          </div>
+        </article>
+      `).join("");
+    }
+
+    async function fetchJobs() {
+      const response = await fetch("/recordings");
+      if (!response.ok) {
+        throw new Error(`Failed to load jobs: ${response.status}`);
+      }
+      const jobs = await response.json();
+      renderJobs(jobs);
+    }
+
+    async function submitJob(event) {
+      event.preventDefault();
+      const payload = buildRecordingPayload();
+
+      setNotice("Checking the account and starting the recording...", "");
+
+      try {
+        const response = await fetch("/recordings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || "Couldn't start the recording.");
+        }
+
+        setNotice(`Recording started. Job ID: ${body.id}`, "success");
+        form.reset();
+        await fetchJobs();
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
+    function buildRecordingPayload() {
+      const username = document.getElementById("username").value.trim();
+      const url = document.getElementById("url").value.trim();
+      const duration = document.getElementById("duration").value.trim();
+      const payload = {};
+      if (username) payload.username = username;
+      if (url) payload.url = url;
+      if (duration) payload.duration = Number(duration);
+      return payload;
+    }
+
+    async function refreshCookieStatus() {
+      const [cookieResponse, loginResponse] = await Promise.all([
+        fetch("/auth/status"),
+        fetch("/auth/login-browser/status"),
+      ]);
+      if (!cookieResponse.ok || !loginResponse.ok) {
+        throw new Error("Failed to load TikTok session status");
+      }
+      const cookieBody = await cookieResponse.json();
+      const loginBody = await loginResponse.json();
+      cookieStatusText.textContent = cookieBody.configured ? "Configured" : "Not configured";
+      browserLoginStatus.textContent = loginBody.browser_open
+        ? (loginBody.authenticated ? "Open and signed in" : "Open")
+        : "Closed";
+    }
+
+    async function saveCookies(event) {
+      event.preventDefault();
+      const sessionInput = document.getElementById("session-ss");
+      const session_ss = sessionInput.value.trim();
+      if (!session_ss) {
+        setSessionNotice("Please enter a session_ss value.", "error");
+        return;
+      }
+
+      try {
+        const response = await fetch("/auth/tiktok-cookies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_ss }),
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || "Couldn't save the TikTok session.");
+        }
+        await refreshCookieStatus();
+        sessionInput.value = "";
+        setSessionNotice("TikTok session saved.", "success");
+      } catch (error) {
+        setSessionNotice(error.message, "error");
+      }
+    }
+
+    async function clearCookies() {
+      try {
+        const response = await fetch("/auth/tiktok-cookies", { method: "DELETE" });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || "Couldn't clear the TikTok session.");
+        }
+        await refreshCookieStatus();
+        document.getElementById("session-ss").value = "";
+        setSessionNotice("TikTok session cleared.", "success");
+      } catch (error) {
+        setSessionNotice(error.message, "error");
+      }
+    }
+
+    async function importCookies(browserName) {
+      try {
+        setSessionNotice(`Importing TikTok session from ${browserName}...`, "");
+        const response = await fetch(`/auth/import-browser/${browserName}`, { method: "POST" });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || `Couldn't import cookies from ${browserName}.`);
+        }
+        await refreshCookieStatus();
+        document.getElementById("session-ss").value = "";
+        setSessionNotice(`TikTok session imported from ${browserName}.`, "success");
+      } catch (error) {
+        setSessionNotice(error.message, "error");
+      }
+    }
+
+    async function startBrowserLogin(browserName) {
+      try {
+        setSessionNotice(`Opening TikTok login in ${browserName}...`, "");
+        const response = await fetch(`/auth/login-browser/${browserName}/start`, { method: "POST" });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || `Couldn't open the login browser in ${browserName}.`);
+        }
+        await refreshCookieStatus();
+        setSessionNotice(`TikTok login is open in ${browserName}. Finish signing in there, close that browser, then click Capture Login Session.`, "success");
+      } catch (error) {
+        setSessionNotice(error.message, "error");
+      }
+    }
+
+    async function captureBrowserLogin() {
+      try {
+        setSessionNotice("Capturing the TikTok session...", "");
+        const response = await fetch("/auth/login-browser/capture", { method: "POST" });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || "Couldn't capture the TikTok session.");
+        }
+        await refreshCookieStatus();
+        setSessionNotice("TikTok session captured and saved.", "success");
+      } catch (error) {
+        setSessionNotice(error.message, "error");
+      }
+    }
+
+    async function closeBrowserLogin() {
+      try {
+        const response = await fetch("/auth/login-browser/close", { method: "POST" });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || "Couldn't close the login browser.");
+        }
+        await refreshCookieStatus();
+        setSessionNotice("Login browser closed.", "success");
+      } catch (error) {
+        setSessionNotice(error.message, "error");
+      }
+    }
+
+    async function handleJobAction(event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+
+      const action = button.dataset.action;
+      const jobId = button.dataset.id;
+      button.disabled = true;
+
+      try {
+        let response;
+        if (action === "stop") {
+          response = await fetch(`/recordings/${jobId}/stop`, { method: "POST" });
+        } else if (action === "delete") {
+          response = await fetch(`/recordings/${jobId}`, { method: "DELETE" });
+        }
+
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.detail || `Couldn't ${action} this job.`);
+        }
+
+        setNotice(`Job ${action} complete.`, "success");
+        await fetchJobs();
+      } catch (error) {
+        setNotice(error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function setAutoRefresh(enabled) {
+      autoRefreshEnabled = enabled;
+      autoRefreshButton.textContent = `Auto Refresh: ${enabled ? "On" : "Off"}`;
+      if (refreshTimer) {
+        window.clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+      if (enabled) {
+        refreshTimer = window.setInterval(() => {
+          fetchJobs().catch((error) => setNotice(error.message, "error"));
+        }, 5000);
+      }
+    }
+
+    form.addEventListener("submit", submitJob);
+    cookiesForm.addEventListener("submit", saveCookies);
+    clearCookiesButton.addEventListener("click", clearCookies);
+    importChromeButton.addEventListener("click", () => importCookies("chrome"));
+    importEdgeButton.addEventListener("click", () => importCookies("edge"));
+    loginChromeButton.addEventListener("click", () => startBrowserLogin("chrome"));
+    loginEdgeButton.addEventListener("click", () => startBrowserLogin("edge"));
+    captureLoginButton.addEventListener("click", captureBrowserLogin);
+    closeLoginButton.addEventListener("click", closeBrowserLogin);
+    clearFormButton.addEventListener("click", () => {
+      form.reset();
+      setNotice("Form cleared.", "");
+    });
+    refreshButton.addEventListener("click", () => {
+      fetchJobs().catch((error) => setNotice(error.message, "error"));
+    });
+    autoRefreshButton.addEventListener("click", () => setAutoRefresh(!autoRefreshEnabled));
+    jobsContainer.addEventListener("click", handleJobAction);
+
+    setAutoRefresh(true);
+    refreshCookieStatus().catch((error) => setSessionNotice(error.message, "error"));
+    fetchJobs().catch((error) => setNotice(error.message, "error"));
+  </script>
+</body>
+</html>
