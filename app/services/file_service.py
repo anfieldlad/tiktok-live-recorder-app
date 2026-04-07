@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
@@ -45,6 +46,42 @@ class FileService:
             candidate.unlink(missing_ok=True)
             deleted.append(str(candidate))
         return deleted
+
+    def remux_temporary_recording(self, temp_file: Path, ffmpeg_bin: str) -> Path | None:
+        if not temp_file.exists() or "_flv" not in temp_file.stem.lower():
+            return None
+
+        final_name = temp_file.name.replace("_flv", "", 1)
+        final_path = temp_file.with_name(final_name)
+        if final_path.exists():
+            final_path.unlink(missing_ok=True)
+
+        command = [
+            ffmpeg_bin,
+            "-y",
+            "-i",
+            str(temp_file),
+            "-c",
+            "copy",
+            str(final_path),
+        ]
+        result = subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if result.returncode != 0 or not final_path.exists():
+            logger.warning(
+                "Failed to remux temporary recorder output",
+                extra={"temp_file": str(temp_file), "error": result.stderr.strip()},
+            )
+            final_path.unlink(missing_ok=True)
+            return None
+
+        temp_file.unlink(missing_ok=True)
+        return final_path
 
     def resolve_job_file(self, job: RecordingJob) -> Path:
         if not job.file_path:

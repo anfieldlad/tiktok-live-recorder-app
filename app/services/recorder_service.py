@@ -88,7 +88,9 @@ class RecorderService:
         if not job:
             return False
         if job.status == RecordingStatus.running and job.pid:
-            self._terminate_process(job.pid)
+            with self._lock:
+                process = self._processes.get(job_id)
+            self._terminate_process(process=process, pid=job.pid)
         if job.file_path:
             Path(job.file_path).unlink(missing_ok=True)
         return self.job_store.delete_job(job_id)
@@ -176,6 +178,11 @@ class RecorderService:
         after = self.file_service.snapshot_output()
         detected_file = self.file_service.detect_output_file(before, after)
         temp_artifact_detected = bool(detected_file and "_flv" in detected_file.stem.lower())
+        if temp_artifact_detected and detected_file is not None:
+            remuxed_file = self.file_service.remux_temporary_recording(detected_file, self.settings.ffmpeg_bin)
+            if remuxed_file is not None:
+                detected_file = remuxed_file
+                temp_artifact_detected = False
         if process.returncode is not None:
             return_code = process.returncode
 

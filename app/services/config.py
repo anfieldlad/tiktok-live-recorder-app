@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     recorder_mode: str = Field(default="manual")
     recorder_proxy: str | None = None
     recorder_bitrate: str | None = None
+    ffmpeg_bin: str = "ffmpeg"
     skip_update_check: bool = True
     cleanup_max_age_hours: int = 3
     watch_poll_interval_seconds: int = 45
