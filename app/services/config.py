@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     host: str = "0.0.0.0"
     port: int = 8000
+    root_path: str = ""
     jobs_file: Path = PROJECT_ROOT / "data" / "jobs.json"
     watch_jobs_file: Path = PROJECT_ROOT / "data" / "watch_jobs.json"
     output_dir: Path = PROJECT_ROOT / "output"

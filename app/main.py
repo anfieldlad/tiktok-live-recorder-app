@@ -50,6 +50,7 @@ def create_app() -> FastAPI:
         title="TikTok Live Recorder App",
         version="0.1.0",
         description="UI and backend powered by Michele0303/tiktok-live-recorder.",
+        root_path=settings.root_path,
     )
 
     app.state.settings = settings
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(watch_router)
 
     def render_dashboard(request: Request, template_name: str, page_name: str) -> HTMLResponse:
+        base_path = settings.root_path.rstrip("/")
         jobs = [job.model_dump(mode="json") for job in job_store.list_jobs()]
         watch_jobs = [job.model_dump(mode="json") for job in watch_store.list_jobs()]
         return templates.TemplateResponse(
@@ -79,6 +81,7 @@ def create_app() -> FastAPI:
                 "watch_jobs": watch_jobs,
                 "page_name": page_name,
                 "settings": settings,
+                "base_path": base_path,
                 "cookies_configured": cookie_service.is_configured(),
                 "browser_login_status": browser_login_service.status(),
             },

@@ -74,8 +74,8 @@
       <h1>TikTok Live Recorder App</h1>
       <p>Keep checking a creator until they go live, then start the recording automatically.</p>
       <nav class="nav">
-        <a href="/">Record Now</a>
-        <a class="active" href="/watch">Watch Mode</a>
+        <a href="{{ base_path or '' }}/">Record Now</a>
+        <a class="active" href="{{ base_path or '' }}/watch">Watch Mode</a>
       </nav>
     </section>
 
@@ -162,6 +162,8 @@
   </main>
 
   <script>
+    const basePath = {{ base_path|tojson }};
+    function appPath(path) { return `${basePath}${path}`; }
     const watchContainer = document.getElementById("watch-container");
     const watchForm = document.getElementById("watch-form");
     const watchNotice = document.getElementById("watch-notice");
@@ -222,12 +224,12 @@
         </article>`).join("");
     }
     async function fetchWatchJobs() {
-      const response = await fetch("/watch-recordings");
+      const response = await fetch(appPath("/watch-recordings"));
       if (!response.ok) throw new Error(`Failed to load watch jobs: ${response.status}`);
       renderWatchJobs(await response.json());
     }
     async function refreshSessionStatus() {
-      const [cookieResponse, loginResponse] = await Promise.all([fetch("/auth/status"), fetch("/auth/login-browser/status")]);
+      const [cookieResponse, loginResponse] = await Promise.all([fetch(appPath("/auth/status")), fetch(appPath("/auth/login-browser/status"))]);
       if (!cookieResponse.ok || !loginResponse.ok) throw new Error("Failed to load TikTok session status");
       const cookieBody = await cookieResponse.json();
       const loginBody = await loginResponse.json();
@@ -250,7 +252,7 @@
       const payload = buildSourcePayload();
       setNotice(watchNotice, "Creating a watch and checking the account...");
       try {
-        const response = await fetch("/watch-recordings", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
+        const response = await fetch(appPath("/watch-recordings"), { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || "Couldn't create the watch.");
         setNotice(watchNotice, "Watch mode is active. Recording will start automatically when the live becomes available.", "success");
@@ -263,7 +265,7 @@
       const sessionValue = document.getElementById("session-ss").value.trim();
       if (!sessionValue) { setNotice(sessionNotice, "Please enter a session_ss value.", "error"); return; }
       try {
-        const response = await fetch("/auth/tiktok-cookies", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ session_ss: sessionValue }) });
+        const response = await fetch(appPath("/auth/tiktok-cookies"), { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ session_ss: sessionValue }) });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || "Couldn't save the TikTok session.");
         document.getElementById("session-ss").value = "";
@@ -273,7 +275,7 @@
     }
     async function clearCookies() {
       try {
-        const response = await fetch("/auth/tiktok-cookies", { method:"DELETE" });
+        const response = await fetch(appPath("/auth/tiktok-cookies"), { method:"DELETE" });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || "Couldn't clear the TikTok session.");
         document.getElementById("session-ss").value = "";
@@ -284,7 +286,7 @@
     async function importCookies(browserName) {
       try {
         setNotice(sessionNotice, `Importing TikTok session from ${browserName}...`);
-        const response = await fetch(`/auth/import-browser/${browserName}`, { method:"POST" });
+        const response = await fetch(appPath(`/auth/import-browser/${browserName}`), { method:"POST" });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || `Couldn't import cookies from ${browserName}.`);
         await refreshSessionStatus();
@@ -294,7 +296,7 @@
     async function startBrowserLogin(browserName) {
       try {
         setNotice(sessionNotice, `Opening a TikTok login window in ${browserName}...`);
-        const response = await fetch(`/auth/login-browser/${browserName}/start`, { method:"POST" });
+        const response = await fetch(appPath(`/auth/login-browser/${browserName}/start`), { method:"POST" });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || `Couldn't open the login browser in ${browserName}.`);
         await refreshSessionStatus();
@@ -304,7 +306,7 @@
     async function captureBrowserLogin() {
       try {
         setNotice(sessionNotice, "Capturing the TikTok session...");
-        const response = await fetch("/auth/login-browser/capture", { method:"POST" });
+        const response = await fetch(appPath("/auth/login-browser/capture"), { method:"POST" });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || "Couldn't capture the TikTok session.");
         await refreshSessionStatus();
@@ -313,7 +315,7 @@
     }
     async function closeBrowserLogin() {
       try {
-        const response = await fetch("/auth/login-browser/close", { method:"POST" });
+        const response = await fetch(appPath("/auth/login-browser/close"), { method:"POST" });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || "Couldn't close the login browser.");
         await refreshSessionStatus();
@@ -327,7 +329,7 @@
       const watchId = button.dataset.id;
       button.disabled = true;
       try {
-        const response = await fetch(action === "stop" ? `/watch-recordings/${watchId}/stop` : `/watch-recordings/${watchId}`, { method: action === "stop" ? "POST" : "DELETE" });
+        const response = await fetch(action === "stop" ? appPath(`/watch-recordings/${watchId}/stop`) : appPath(`/watch-recordings/${watchId}`), { method: action === "stop" ? "POST" : "DELETE" });
         const body = await response.json();
         if (!response.ok) throw new Error(body.detail || "The action could not be completed.");
         setNotice(watchNotice, "Watch list updated.", "success");
