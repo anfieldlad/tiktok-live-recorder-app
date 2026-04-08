@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -98,6 +98,14 @@ def create_app() -> FastAPI:
     @app.get("/watch", response_class=HTMLResponse)
     def watch_page(request: Request) -> HTMLResponse:
         return render_dashboard(request, "watch.html", "watch")
+
+    @app.get("/favicon.svg")
+    def favicon_svg() -> FileResponse:
+        return FileResponse(app_root / "static" / "favicon.svg", media_type="image/svg+xml")
+
+    @app.get("/favicon.ico")
+    def favicon_ico() -> FileResponse:
+        return FileResponse(app_root / "static" / "favicon.svg", media_type="image/svg+xml")
 
     @app.get("/health")
     def health() -> dict[str, str]:
