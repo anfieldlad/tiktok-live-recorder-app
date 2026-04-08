@@ -1,0 +1,66 @@
+:root { --bg:#f3efe6; --panel:rgba(255,252,246,.95); --ink:#161512; --muted:#625c54; --line:rgba(22,21,18,.12); --accent:#cb5b37; --accent2:#17655d; --danger:#b43b3b; --warn:#9a6a1c; --shadow:0 20px 60px rgba(22,21,18,.09); }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:radial-gradient(circle at top left, rgba(203,91,55,.17), transparent 28%), radial-gradient(circle at right, rgba(23,101,93,.14), transparent 22%), linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%); padding:28px 18px 42px; }
+.wrap { max-width:1120px; margin:0 auto; }
+.hero,.panel,.card,.step { background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:var(--shadow); }
+.hero,.panel,.card,.step { padding:24px; }
+.hero { margin-bottom:20px; }
+.eyebrow { margin:0 0 10px; font-size:.75rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+h1 { margin:0 0 12px; font-size:clamp(2rem, 4vw, 3.8rem); line-height:.95; }
+h2 { margin:0 0 10px; font-size:1.16rem; }
+h3 { margin:0; font-size:1rem; }
+p { margin:0; color:var(--muted); line-height:1.65; }
+.nav { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+.nav a,.button-link,button { border:0; border-radius:999px; padding:11px 16px; font:inherit; text-decoration:none; cursor:pointer; transition:transform 140ms ease, opacity 140ms ease; }
+.nav a:hover,.button-link:hover,button:hover { transform:translateY(-1px); }
+.nav a.active,.primary,.button-link.primary { background:var(--accent); color:#fffaf6; }
+.nav a,.secondary { background:rgba(22,21,18,.08); color:var(--ink); }
+.danger { background:rgba(180,59,59,.12); color:var(--danger); }
+.warn { background:rgba(154,106,28,.12); color:var(--warn); }
+button:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+.layout { display:grid; gap:20px; grid-template-columns:minmax(320px,380px) 1fr; align-items:start; }
+.stack,.steps,.jobs,.watch-list { display:grid; gap:20px; }
+.field { display:grid; gap:7px; margin-bottom:14px; }
+label,.small,.subtle { font-size:.9rem; color:var(--muted); }
+input { width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; color:var(--ink); background:rgba(255,255,255,.8); }
+.actions,.job-actions,.split,.helper-actions,.step-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.session-header { display:grid; gap:8px; margin-bottom:16px; }
+.session-header-top { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; }
+.notice { margin-top:12px; border-radius:16px; padding:12px 14px; background:rgba(22,21,18,.05); color:var(--muted); min-height:48px; white-space:pre-wrap; }
+.notice.error { background:rgba(180,59,59,.1); color:#7b2626; }
+.notice.success { background:rgba(23,101,93,.11); color:#144d47; }
+.pill { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:.74rem; background:rgba(22,21,18,.08); white-space:nowrap; text-align:center; min-width:118px; font-weight:600; }
+.good { background:rgba(23,101,93,.12); color:var(--accent2); }
+.bad { background:rgba(180,59,59,.12); color:var(--danger); }
+.soft { background:rgba(154,106,28,.12); color:var(--warn); }
+.card { padding:22px; border-radius:22px; background:rgba(255,255,255,.72); }
+.step { padding:20px; }
+.is-hidden { display:none !important; }
+.split,.step-head { justify-content:space-between; align-items:start; }
+.job-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px 18px; margin-bottom:20px; align-items:start; }
+.job-identity { display:grid; gap:10px; min-width:0; }
+.job-name { font-size:1.18rem; line-height:1.08; overflow-wrap:anywhere; }
+.job-id { display:inline-flex; align-items:center; width:fit-content; max-width:100%; padding:5px 10px; border-radius:999px; background:rgba(22,21,18,.06); color:var(--muted); font-size:.8rem; overflow-wrap:anywhere; }
+.status-pill { min-width:104px; }
+.step-head { margin-bottom:10px; }
+.step-number { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(203,91,55,.12); color:var(--accent); font-size:.86rem; font-weight:700; margin-right:10px; }
+.step-title { display:flex; align-items:center; }
+.step-copy { margin-bottom:16px; line-height:1.55; }
+.job-meta { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin:0 0 18px; }
+.meta-card { border:1px solid rgba(22,21,18,.08); border-radius:16px; padding:12px 13px; background:rgba(243,239,230,.55); min-width:0; }
+.meta-card.wide { grid-column:1 / -1; }
+.meta-label { margin:0 0 5px; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.meta-value { margin:0; font-size:.96rem; line-height:1.4; color:var(--ink); overflow-wrap:anywhere; }
+.empty { border:1px dashed var(--line); border-radius:20px; padding:22px; color:var(--muted); text-align:center; background:rgba(255,255,255,.45); }
+.footer { margin-top:18px; padding:12px 16px; background:rgba(255,252,246,.74); border:1px solid var(--line); border-radius:18px; }
+.footer-list { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; justify-content:center; color:var(--muted); font-size:.84rem; line-height:1.45; text-align:center; }
+.footer-item { display:inline-flex; align-items:center; gap:8px; }
+.footer-item + .footer-item::before { content:""; width:4px; height:4px; border-radius:999px; background:rgba(22,21,18,.22); }
+.footer a { color:var(--accent2); }
+details { margin-top:14px; }
+details summary { cursor:pointer; color:var(--muted); }
+code { background:rgba(22,21,18,.06); border-radius:8px; padding:2px 6px; font-size:.92em; }
+@media (max-width:920px) { .layout { grid-template-columns:1fr; } }
+@media (max-width:720px) { .job-meta { grid-template-columns:1fr; } .meta-card.wide { grid-column:auto; } }
+@media (max-width:640px) { .job-top { grid-template-columns:1fr; gap:14px; } .status-pill { justify-self:start; } }
+@media (max-width:560px) { .session-header-top { grid-template-columns:1fr; } }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Live Recorder App</title>
+  <link rel="icon" type="image/svg+xml" href="{{ (base_path or '') ~ '/favicon.svg' }}">
+  <link rel="stylesheet" href="{{ (base_path or '') ~ '/static/css/app.css' }}">
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">{% block hero_eyebrow %}{% endblock %}</p>
+      <h1>TikTok Live Recorder App</h1>
+      <p>{% block hero_description %}{% endblock %}</p>
+      <nav class="nav">
+        <a class="{{ 'active' if page_name == 'record' else '' }}" href="{{ base_path or '' }}/">Record Now</a>
+        <a class="{{ 'active' if page_name == 'watch' else '' }}" href="{{ base_path or '' }}/watch">Watch Mode</a>
+      </nav>
+    </section>
+    {% block page_content %}{% endblock %}
+    <footer class="footer">
+      <div class="footer-list">
+        <span class="footer-item">Beta app, may contain bugs</span>
+        <span class="footer-item">Report issues to <a href="mailto:bobby@dioriza.com">bobby@dioriza.com</a></span>
+        <span class="footer-item">Created by <a href="https://badai.tech/" target="_blank" rel="noreferrer">BAD Lab</a></span>
+        <span class="footer-item">Storage limit: ~20 GB</span>
+      </div>
+    </footer>
+  </main>
+  <script>
+    window.appConfig = {
+      basePath: {{ base_path|tojson }}
+    };
+  </script>
+  <script src="{{ (base_path or '') ~ '/static/js/app-common.js' }}"></script>
+  {% block page_scripts %}{% endblock %}
+</body>
+</html>

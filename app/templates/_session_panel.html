@@ -1,0 +1,45 @@
+<article class="panel">
+  <div class="session-header">
+    <div class="session-header-top">
+      <h2>Unlock private lives</h2>
+      <span id="session-pill" class="pill {{ 'good' if cookies_configured else 'soft' }}">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
+    </div>
+    <p class="small">Use this only when a private or restricted live requires your TikTok session.</p>
+  </div>
+  <div class="steps {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}">
+    <div class="step">
+      <div class="step-head"><div class="step-title"><span class="step-number">1</span><h3>Open a login browser</h3></div></div>
+      <p class="small step-copy">Open a clean Chrome or Edge window for TikTok sign-in.</p>
+      <div class="step-actions">
+        <button class="primary" type="button" id="login-chrome">Open Chrome</button>
+        <button class="secondary" type="button" id="login-edge">Open Edge</button>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-head"><div class="step-title"><span class="step-number">2</span><h3>Sign in and close that browser</h3></div></div>
+      <p class="small step-copy">Finish the TikTok sign-in flow, then close that login window so the session can be saved safely.</p>
+      <div class="step-actions"><button class="danger" type="button" id="close-login">Close login browser</button></div>
+    </div>
+    <div class="step">
+      <div class="step-head"><div class="step-title"><span class="step-number">3</span><h3>Capture session</h3></div></div>
+      <p class="small step-copy">Save the signed-in TikTok session for private or follower-only lives.</p>
+      <div class="step-actions"><button class="primary" type="button" id="capture-login">Capture session</button></div>
+    </div>
+  </div>
+  <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
+  <details>
+    <summary>{{ "Session options" if not browser_login_status.browser_launch_supported else "Advanced session options" }}</summary>
+    <form id="cookies-form" style="margin-top:14px;">
+      <div class="field">
+        <label for="session-ss">session_ss</label>
+        <input id="session-ss" type="text" placeholder="Paste session_ss here">
+      </div>
+      <div class="actions">
+        <button class="primary" type="submit">Save session manually</button>
+        <button class="secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-chrome">Import Chrome</button>
+        <button class="secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-edge">Import Edge</button>
+        <button class="danger" type="button" id="clear-cookies">Clear session</button>
+      </div>
+    </form>
+  </details>
+</article>
