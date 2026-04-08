@@ -66,9 +66,10 @@
     details summary { cursor:pointer; color:var(--muted); }
     code { background:rgba(22,21,18,.06); border-radius:8px; padding:2px 6px; font-size:.92em; }
     .empty { border:1px dashed var(--line); border-radius:20px; padding:22px; color:var(--muted); text-align:center; background:rgba(255,255,255,.45); }
-    .footer { margin-top:22px; padding:18px 20px; background:rgba(255,252,246,.82); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); display:grid; gap:8px; }
-    .footer p { font-size:.94rem; }
-    .footer strong { color:var(--ink); }
+    .footer { margin-top:18px; padding:12px 16px; background:rgba(255,252,246,.74); border:1px solid var(--line); border-radius:18px; }
+    .footer-list { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; justify-content:center; color:var(--muted); font-size:.84rem; line-height:1.45; text-align:center; }
+    .footer-item { display:inline-flex; align-items:center; gap:8px; }
+    .footer-item + .footer-item::before { content:""; width:4px; height:4px; border-radius:999px; background:rgba(22,21,18,.22); }
     .footer a { color:var(--accent2); }
     @media (max-width:920px) { .layout { grid-template-columns:1fr; } }
     @media (max-width:720px) { .job-meta { grid-template-columns:1fr; } .meta-card.wide { grid-column:auto; } }
@@ -174,9 +175,12 @@
     </section>
 
     <footer class="footer">
-      <p><strong>Beta version.</strong> App ini masih dalam tahap beta dan kemungkinan masih ada banyak bug. Jika menemukan masalah, silakan laporkan ke <a href="mailto:bobby@dioriza.com">bobby@dioriza.com</a>.</p>
-      <p>Created by <a href="https://badai.tech/" target="_blank" rel="noreferrer">BAD Lab</a>.</p>
-      <p><strong>Catatan storage:</strong> ini masih small app dengan kapasitas penyimpanan sekitar 20 GB, jadi file recording sebaiknya segera diunduh atau dihapus setelah tidak lagi dibutuhkan.</p>
+      <div class="footer-list">
+        <span class="footer-item">Beta app, may contain bugs</span>
+        <span class="footer-item">Report issues to <a href="mailto:bobby@dioriza.com">bobby@dioriza.com</a></span>
+        <span class="footer-item">Created by <a href="https://badai.tech/" target="_blank" rel="noreferrer">BAD Lab</a></span>
+        <span class="footer-item">Storage limit: about 20 GB</span>
+      </div>
     </footer>
   </main>
 
