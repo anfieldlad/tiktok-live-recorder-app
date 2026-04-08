@@ -39,12 +39,22 @@ app/
   api/
   models/
   services/
+  static/
   templates/
 data/
 logs/
 output/
 vendor/
 ```
+
+Frontend files are split for reuse and easier maintenance:
+
+- shared layout in `app/templates/base.html`
+- shared session UI in `app/templates/_session_panel.html`
+- shared CSS in `app/static/css/app.css`
+- shared browser helpers in `app/static/js/app-common.js`
+- shared session logic in `app/static/js/session-panel.js`
+- page-specific logic in `app/static/js/record-page.js` and `app/static/js/watch-page.js`
 
 ## Prerequisites
 
@@ -162,6 +172,9 @@ If a live requires authentication:
 5. Close that login window.
 6. Capture the session.
 7. Try recording again.
+
+On Linux server deployments, the guided Chrome or Edge launcher is hidden because it is Windows-only.
+For Ubuntu or other server setups, use manual `session_ss` entry instead.
 
 ### Download a finished file
 
@@ -496,6 +509,7 @@ sudo certbot --nginx -d your-domain.com
 - Finished files are stored locally.
 - Downloading a finished recording removes the file afterward.
 - Private or restricted lives may require a valid TikTok session.
+- The guided browser-login launcher currently works only on Windows. Linux deployments use manual session input.
 - Invalid or empty form submissions are surfaced with readable browser messages.
 - Corrupt `jobs.json` or `watch_jobs.json` files are backed up and reset automatically so the app can recover.
 
