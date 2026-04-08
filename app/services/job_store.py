@@ -17,6 +17,9 @@ class JobStore:
     def __init__(self, jobs_file: Path) -> None:
         self.jobs_file = jobs_file
         self._lock = threading.RLock()
+        self._recovery_count = 0
+        self._last_recovery_at: str | None = None
+        self._last_recovery_backup_file: str | None = None
         if not self.jobs_file.exists():
             self.jobs_file.write_text("[]\n", encoding="utf-8")
 
@@ -71,6 +74,14 @@ class JobStore:
                 return job
         return None
 
+    def diagnostics(self) -> dict[str, object]:
+        return {
+            "jobs_file": str(self.jobs_file),
+            "recovery_count": self._recovery_count,
+            "last_recovery_at": self._last_recovery_at,
+            "last_recovery_backup_file": self._last_recovery_backup_file,
+        }
+
     def _read_jobs(self) -> list[RecordingJob]:
         try:
             raw = self.jobs_file.read_text(encoding="utf-8-sig").strip()
@@ -105,3 +116,6 @@ class JobStore:
         except OSError:
             logger.exception("Failed to back up corrupt jobs file", extra={"jobs_file": str(self.jobs_file)})
         self.jobs_file.write_text("[]\n", encoding="utf-8")
+        self._recovery_count += 1
+        self._last_recovery_at = datetime.now(timezone.utc).isoformat()
+        self._last_recovery_backup_file = str(backup_file)

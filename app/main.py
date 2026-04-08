@@ -111,6 +111,36 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/health/details")
+    def health_details() -> dict[str, object]:
+        jobs = job_store.list_jobs()
+        watch_jobs = watch_store.list_jobs()
+        active_recording = job_store.get_active_job()
+        return {
+            "status": "ok",
+            "app_env": settings.app_env,
+            "root_path": settings.root_path,
+            "cookies_configured": cookie_service.is_configured(),
+            "browser_login": browser_login_service.status(),
+            "recordings": {
+                "total": len(jobs),
+                "active_job_id": active_recording.id if active_recording else None,
+                "active_count": sum(1 for job in jobs if job.status in {"queued", "running"}),
+            },
+            "watches": {
+                "total": len(watch_jobs),
+                "active_count": sum(1 for job in watch_jobs if job.status in {"watching", "recording"}),
+            },
+            "services": {
+                "recorder": recorder_service.diagnostics(),
+                "watch": watch_service.diagnostics(),
+            },
+            "stores": {
+                "jobs": job_store.diagnostics(),
+                "watch_jobs": watch_store.diagnostics(),
+            },
+        }
+
     return app
 
 

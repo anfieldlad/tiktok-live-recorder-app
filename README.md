@@ -6,6 +6,7 @@ It includes:
 - a browser UI with separate `Record Now` and `Watch Mode` pages
 - a FastAPI backend
 - local job tracking, watch tracking, and downloads
+- lightweight diagnostics for health and runtime status
 
 UI and backend powered by [`Michele0303/tiktok-live-recorder`](https://github.com/Michele0303/tiktok-live-recorder).
 
@@ -19,6 +20,7 @@ UI and backend powered by [`Michele0303/tiktok-live-recorder`](https://github.co
 - download the finished file
 - delete the file automatically after download
 - support a guided TikTok session flow for private or restricted lives
+- expose runtime diagnostics for troubleshooting
 
 ## Architecture
 
@@ -205,6 +207,23 @@ Optional:
 GET /recordings
 ```
 
+### Health checks
+
+```http
+GET /health
+GET /health/details
+```
+
+`/health` returns a simple `{"status":"ok"}` response.
+
+`/health/details` returns a richer diagnostics payload including:
+
+- app environment and root path
+- cookie and browser-login state
+- recording and watch counts
+- recorder/watch service diagnostics
+- store recovery metadata
+
 ### Create a watch
 
 ```http
@@ -351,6 +370,14 @@ Open:
 
 Stop it after the test and continue with `systemd`.
 
+You can verify the app and favicon routes with:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/health/details
+curl http://127.0.0.1:8000/favicon.svg
+```
+
 ### 9. Create a systemd service
 
 Create:
@@ -368,6 +395,7 @@ After=network.target
 
 [Service]
 User=ubuntu
+Group=ubuntu
 WorkingDirectory=/opt/ttl-downloader
 EnvironmentFile=/opt/ttl-downloader/.env
 ExecStart=/opt/ttl-downloader/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
@@ -384,6 +412,15 @@ Then:
 sudo systemctl daemon-reload
 sudo systemctl enable ttl-downloader
 sudo systemctl start ttl-downloader
+sudo systemctl status ttl-downloader
+```
+
+After future code updates, use:
+
+```bash
+cd /opt/ttl-downloader
+git pull
+sudo systemctl restart ttl-downloader
 sudo systemctl status ttl-downloader
 ```
 
@@ -404,6 +441,7 @@ server {
 
     location / {
         proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -418,6 +456,27 @@ Enable it:
 sudo ln -s /etc/nginx/sites-available/ttl-downloader /etc/nginx/sites-enabled/ttl-downloader
 sudo nginx -t
 sudo systemctl reload nginx
+```
+
+If you serve the app under a subpath such as `/tiktok`, set `ROOT_PATH=/tiktok` in `.env` and use a matching Nginx location:
+
+```nginx
+location /tiktok/ {
+    proxy_pass http://127.0.0.1:8000/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Then verify:
+
+```bash
+curl https://your-domain.com/tiktok/health
+curl https://your-domain.com/tiktok/health/details
+curl https://your-domain.com/tiktok/favicon.svg
 ```
 
 ### 11. Optional: add HTTPS
@@ -437,6 +496,8 @@ sudo certbot --nginx -d your-domain.com
 - Finished files are stored locally.
 - Downloading a finished recording removes the file afterward.
 - Private or restricted lives may require a valid TikTok session.
+- Invalid or empty form submissions are surfaced with readable browser messages.
+- Corrupt `jobs.json` or `watch_jobs.json` files are backed up and reset automatically so the app can recover.
 
 ## Credits
 

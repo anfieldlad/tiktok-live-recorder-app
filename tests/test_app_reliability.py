@@ -36,6 +36,9 @@ class StoreRecoveryTests(unittest.TestCase):
             self.assertEqual(watch_jobs_file.read_text(encoding="utf-8"), "[]\n")
             backups = list(Path(temp_dir).glob("watch_jobs.corrupt-*.json"))
             self.assertEqual(len(backups), 1)
+            diagnostics = store.diagnostics()
+            self.assertEqual(diagnostics["recovery_count"], 1)
+            self.assertTrue(diagnostics["last_recovery_backup_file"])
 
 
 class AppReliabilityTests(unittest.TestCase):
@@ -79,6 +82,21 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertEqual(get_response.status_code, 200)
         self.assertEqual(head_response.status_code, 200)
         self.assertEqual(get_response.headers.get("content-type"), "image/svg+xml")
+
+    def test_health_details_exposes_runtime_diagnostics(self) -> None:
+        client = self.create_test_client()
+
+        response = client.get("/health/details")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "ok")
+        self.assertIn("services", body)
+        self.assertIn("stores", body)
+        self.assertIn("recordings", body)
+        self.assertIn("watches", body)
+        self.assertIn("thread_alive", body["services"]["watch"])
+        self.assertIn("recovery_count", body["stores"]["jobs"])
 
 
 if __name__ == "__main__":

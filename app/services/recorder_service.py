@@ -31,6 +31,18 @@ class RecorderService:
         self._processes: dict[str, subprocess.Popen[str]] = {}
         self._lock = threading.RLock()
 
+    def diagnostics(self) -> dict[str, object]:
+        with self._lock:
+            active_processes = {
+                job_id: process.pid
+                for job_id, process in self._processes.items()
+                if process.poll() is None
+            }
+        return {
+            "active_process_count": len(active_processes),
+            "active_processes": active_processes,
+        }
+
     def create_job(self, payload: RecordingCreateRequest) -> RecordingJob:
         if self.job_store.has_active_job():
             active = self.job_store.get_active_job()

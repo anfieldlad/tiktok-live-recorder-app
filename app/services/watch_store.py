@@ -17,6 +17,9 @@ class WatchStore:
     def __init__(self, watch_jobs_file: Path) -> None:
         self.watch_jobs_file = watch_jobs_file
         self._lock = threading.RLock()
+        self._recovery_count = 0
+        self._last_recovery_at: str | None = None
+        self._last_recovery_backup_file: str | None = None
         if not self.watch_jobs_file.exists():
             self.watch_jobs_file.write_text("[]\n", encoding="utf-8")
 
@@ -63,6 +66,14 @@ class WatchStore:
     def active_jobs(self) -> list[WatchJob]:
         return [job for job in self.list_jobs() if job.status in {WatchStatus.watching, WatchStatus.recording}]
 
+    def diagnostics(self) -> dict[str, object]:
+        return {
+            "watch_jobs_file": str(self.watch_jobs_file),
+            "recovery_count": self._recovery_count,
+            "last_recovery_at": self._last_recovery_at,
+            "last_recovery_backup_file": self._last_recovery_backup_file,
+        }
+
     def _read_jobs(self) -> list[WatchJob]:
         try:
             raw = self.watch_jobs_file.read_text(encoding="utf-8-sig").strip()
@@ -102,3 +113,6 @@ class WatchStore:
                 extra={"watch_jobs_file": str(self.watch_jobs_file)},
             )
         self.watch_jobs_file.write_text("[]\n", encoding="utf-8")
+        self._recovery_count += 1
+        self._last_recovery_at = datetime.now(timezone.utc).isoformat()
+        self._last_recovery_backup_file = str(backup_file)

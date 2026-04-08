@@ -39,6 +39,14 @@ class WatchService:
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
 
+    def diagnostics(self) -> dict[str, object]:
+        return {
+            "thread_alive": self._thread.is_alive(),
+            "poll_interval_seconds": self.poll_interval_seconds,
+            "stop_requested": self._stop_event.is_set(),
+            "active_watch_count": len(self.watch_store.active_jobs()),
+        }
+
     def create_watch(self, payload: WatchCreateRequest) -> WatchJob:
         watch = WatchJob(
             username=payload.username,
