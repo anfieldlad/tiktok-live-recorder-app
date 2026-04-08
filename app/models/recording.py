@@ -252,3 +252,4 @@ class TikTokBrowserLoginStatusResponse(BaseModel):
     browser_name: Optional[str] = None
     authenticated: bool
     cookies_configured: bool
+    browser_launch_supported: bool

@@ -104,9 +104,15 @@ class BrowserLoginService:
             "browser_name": state.get("browser_name"),
             "authenticated": bool(state.get("authenticated")),
             "cookies_configured": self.cookie_service.is_configured(),
+            "browser_launch_supported": os.name == "nt",
         }
 
     def _resolve_browser_path(self, browser_name: str) -> Path:
+        if os.name != "nt":
+            raise ValueError(
+                "Opening Chrome or Edge from the app is supported on Windows only. "
+                "On this server, save session_ss manually or import cookies another way."
+            )
         browser_paths = {
             "chrome": [
                 Path("C:/Program Files/Google/Chrome/Application/chrome.exe"),

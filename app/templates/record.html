@@ -45,6 +45,7 @@
     .step,.card { border:1px solid var(--line); border-radius:22px; background:rgba(255,255,255,.72); }
     .card { padding:22px; }
     .step { padding:20px; }
+    .is-hidden { display:none !important; }
     .step-head,.split { align-items:start; justify-content:space-between; }
     .job-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px 18px; margin-bottom:20px; align-items:start; }
     .job-identity { display:grid; gap:10px; min-width:0; }
@@ -120,7 +121,7 @@
             </div>
             <p class="small">Use this only when a private or restricted live requires your TikTok session.</p>
           </div>
-          <div class="steps">
+          <div class="steps {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}">
             <div class="step">
               <div class="step-head"><div class="step-title"><span class="step-number">1</span><h3>Open a login browser</h3></div></div>
               <p class="small step-copy">Open a clean Chrome or Edge window for TikTok sign-in.</p>
@@ -142,7 +143,7 @@
           </div>
           <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
           <details>
-            <summary>Advanced session options</summary>
+            <summary>{{ "Session options" if not browser_login_status.browser_launch_supported else "Advanced session options" }}</summary>
             <form id="cookies-form" style="margin-top:14px;">
               <div class="field">
                 <label for="session-ss">session_ss</label>
@@ -150,8 +151,8 @@
               </div>
               <div class="actions">
                 <button class="primary" type="submit">Save session manually</button>
-                <button class="secondary" type="button" id="import-chrome">Import Chrome</button>
-                <button class="secondary" type="button" id="import-edge">Import Edge</button>
+                <button class="secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-chrome">Import Chrome</button>
+                <button class="secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-edge">Import Edge</button>
                 <button class="danger" type="button" id="clear-cookies">Clear session</button>
               </div>
             </form>
@@ -206,6 +207,13 @@
     const autoRefreshButton = document.getElementById("toggle-auto-refresh");
     let autoRefreshEnabled = true;
     let refreshTimer = null;
+
+    function setBrowserLoginControlsEnabled(enabled) {
+      loginChromeButton.disabled = !enabled;
+      loginEdgeButton.disabled = !enabled;
+      captureLoginButton.disabled = !enabled;
+      closeLoginButton.disabled = !enabled;
+    }
 
     function setNotice(el, message, type = "") { el.textContent = message; el.className = `notice ${type}`.trim(); }
     function formatApiDetail(detail) {
@@ -299,9 +307,11 @@
       if (!cookieResponse.ok || !loginResponse.ok) throw new Error("Failed to load TikTok session status");
       const cookieBody = await cookieResponse.json();
       const loginBody = await loginResponse.json();
+      setBrowserLoginControlsEnabled(loginBody.browser_launch_supported);
       sessionPill.textContent = cookieBody.configured ? "Session ready" : "Session needed";
       sessionPill.className = `pill ${cookieBody.configured ? "good" : "soft"}`;
       if (cookieBody.configured) setNotice(sessionNotice, "Your TikTok session is ready.", "success");
+      else if (!loginBody.browser_launch_supported) setNotice(sessionNotice, "Guided Chrome or Edge login is available on Windows only. On this server, save session_ss manually or import cookies another way.");
       else if (loginBody.browser_open) setNotice(sessionNotice, "The TikTok login window is open. Finish signing in there, then close it and click Capture session.");
       else setNotice(sessionNotice, "No TikTok session is saved yet. You only need this for private or restricted lives.");
     }
