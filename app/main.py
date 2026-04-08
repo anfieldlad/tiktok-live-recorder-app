@@ -4,6 +4,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api.auth import router as auth_router
@@ -44,7 +45,8 @@ def create_app() -> FastAPI:
         recorder_service,
         settings.watch_poll_interval_seconds,
     )
-    templates = Jinja2Templates(directory=str(settings.jobs_file.parents[1] / "app" / "templates"))
+    app_root = settings.jobs_file.parents[1] / "app"
+    templates = Jinja2Templates(directory=str(app_root / "templates"))
 
     app = FastAPI(
         title="TikTok Live Recorder App",
@@ -63,6 +65,8 @@ def create_app() -> FastAPI:
     app.state.recorder_service = recorder_service
     app.state.watch_service = watch_service
     app.state.templates = templates
+
+    app.mount("/static", StaticFiles(directory=str(app_root / "static")), name="static")
 
     app.include_router(auth_router)
     app.include_router(recordings_router)
