@@ -11,7 +11,7 @@ from app.api.auth import router as auth_router
 from app.api.recordings import router as recordings_router
 from app.api.recordings import watch_router
 from app.services.browser_login_service import BrowserLoginService
-from app.services.config import get_settings
+from app.services.config import PROJECT_ROOT, get_settings
 from app.services.cookie_service import CookieService
 from app.services.file_service import FileService
 from app.services.job_store import JobStore
@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
         recorder_service,
         settings.watch_poll_interval_seconds,
     )
-    app_root = settings.jobs_file.parents[1] / "app"
+    app_root = PROJECT_ROOT / "app"
     templates = Jinja2Templates(directory=str(app_root / "templates"))
 
     app = FastAPI(
