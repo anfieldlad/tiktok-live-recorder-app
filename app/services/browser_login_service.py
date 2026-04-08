@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 from pathlib import Path
 
@@ -71,7 +72,8 @@ class BrowserLoginService:
     def close(self) -> dict:
         state = self._read_state()
         browser_name = state.get("browser_name")
-        if browser_name:
+        browser_pid = state.get("browser_pid")
+        if browser_name and os.name == "nt":
             process_name = "chrome.exe" if browser_name == "chrome" else "msedge.exe"
             subprocess.run(
                 ["taskkill", "/IM", process_name, "/F"],
@@ -79,6 +81,11 @@ class BrowserLoginService:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+        elif browser_pid:
+            try:
+                os.kill(int(browser_pid), signal.SIGTERM)
+            except (OSError, ValueError, TypeError):
+                pass
         self._write_state(
             {
                 "browser_name": None,

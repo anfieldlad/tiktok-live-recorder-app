@@ -96,6 +96,29 @@ class RecorderService:
         return self.job_store.delete_job(job_id)
 
     def _run_job(self, job_id: str) -> None:
+        try:
+            self._run_job_inner(job_id)
+        except Exception as exc:
+            logger.exception("Unhandled recorder job failure", extra={"job_id": job_id})
+            with self._lock:
+                process = self._processes.pop(job_id, None)
+            if process is not None and process.poll() is None:
+                self._terminate_process(process=process, pid=process.pid)
+            self.job_store.update_job(
+                job_id,
+                lambda current: current.model_copy(
+                    update={
+                        "status": RecordingStatus.failed,
+                        "progress": RecordingProgress.failed,
+                        "progress_message": "The recording ended with an unexpected error.",
+                        "error": str(exc),
+                        "finished_at": utc_now(),
+                        "pid": None,
+                    }
+                ),
+            )
+
+    def _run_job_inner(self, job_id: str) -> None:
         job = self.job_store.get_job(job_id)
         if not job:
             return

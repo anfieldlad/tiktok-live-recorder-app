@@ -99,11 +99,11 @@ def create_app() -> FastAPI:
     def watch_page(request: Request) -> HTMLResponse:
         return render_dashboard(request, "watch.html", "watch")
 
-    @app.get("/favicon.svg")
+    @app.api_route("/favicon.svg", methods=["GET", "HEAD"])
     def favicon_svg() -> FileResponse:
         return FileResponse(app_root / "static" / "favicon.svg", media_type="image/svg+xml")
 
-    @app.get("/favicon.ico")
+    @app.api_route("/favicon.ico", methods=["GET", "HEAD"])
     def favicon_ico() -> FileResponse:
         return FileResponse(app_root / "static" / "favicon.svg", media_type="image/svg+xml")
 

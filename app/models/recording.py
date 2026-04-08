@@ -177,6 +177,9 @@ class WatchCreateRequest(BaseModel):
         normalized = value.strip().lstrip("@")
         if not normalized:
             return None
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._")
+        if any(char not in allowed for char in normalized):
+            raise ValueError("username may only contain letters, numbers, dots, and underscores")
         return normalized
 
     @model_validator(mode="after")

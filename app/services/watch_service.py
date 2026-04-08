@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import time
 
@@ -15,6 +16,9 @@ from app.services.job_store import JobStore
 from app.services.live_status_service import LiveStatusService
 from app.services.recorder_service import RecorderService
 from app.services.watch_store import WatchStore
+
+
+logger = logging.getLogger(__name__)
 
 
 class WatchService:
@@ -68,102 +72,124 @@ class WatchService:
             try:
                 self._tick()
             except Exception:
-                pass
+                logger.exception("Watch loop tick failed")
             self._stop_event.wait(self.poll_interval_seconds)
 
     def _tick(self) -> None:
         active_watch_jobs = self.watch_store.active_jobs()
         for watch in active_watch_jobs:
-            if watch.status == WatchStatus.recording and watch.linked_recording_job_id:
-                linked = self.job_store.get_job(watch.linked_recording_job_id)
-                if linked and linked.status in {RecordingStatus.queued, RecordingStatus.running}:
-                    self.watch_store.update_job(
-                        watch.id,
-                        lambda current: current.model_copy(
-                            update={
-                                "last_checked_at": utc_now(),
-                                "last_message": "Recording is in progress.",
-                            }
-                        ),
-                    )
-                    continue
-
-                if linked and linked.status == RecordingStatus.failed:
-                    self.watch_store.update_job(
-                        watch.id,
-                        lambda current: current.model_copy(
-                            update={
-                                "status": WatchStatus.failed,
-                                "finished_at": utc_now(),
-                                "last_checked_at": utc_now(),
-                                "last_message": linked.error or "The automatic recording failed.",
-                            }
-                        ),
-                    )
-                    continue
-
-                if linked and linked.status == RecordingStatus.stopped:
-                    self.watch_store.update_job(
-                        watch.id,
-                        lambda current: current.model_copy(
-                            update={
-                                "status": WatchStatus.stopped,
-                                "finished_at": utc_now(),
-                                "last_checked_at": utc_now(),
-                                "last_message": "The automatic recording was stopped.",
-                            }
-                        ),
-                    )
-                    continue
-
+            try:
+                self._process_watch(watch)
+            except Exception as exc:
+                logger.exception("Watch job processing failed", extra={"watch_id": watch.id})
                 self.watch_store.update_job(
                     watch.id,
                     lambda current: current.model_copy(
                         update={
-                            "status": WatchStatus.completed,
+                            "status": WatchStatus.failed,
                             "finished_at": utc_now(),
                             "last_checked_at": utc_now(),
-                            "last_message": "Watch completed after the recording finished.",
+                            "last_message": str(exc) or "Watch mode ended with an unexpected error.",
                         }
                     ),
                 )
-                continue
 
-            if self.job_store.has_active_job():
+    def _process_watch(self, watch: WatchJob) -> None:
+        current_watch = self.watch_store.get_job(watch.id)
+        if not current_watch or current_watch.status not in {WatchStatus.watching, WatchStatus.recording}:
+            return
+        watch = current_watch
+
+        if watch.status == WatchStatus.recording and watch.linked_recording_job_id:
+            linked = self.job_store.get_job(watch.linked_recording_job_id)
+            if linked and linked.status in {RecordingStatus.queued, RecordingStatus.running}:
                 self.watch_store.update_job(
                     watch.id,
                     lambda current: current.model_copy(
                         update={
                             "last_checked_at": utc_now(),
-                            "last_message": "Waiting for the current recording slot to become available.",
+                            "last_message": "Recording is in progress.",
                         }
                     ),
                 )
-                continue
+                return
 
-            payload = RecordingCreateRequest(username=watch.username, url=watch.url, duration=watch.duration)
-            live_status = self.live_status_service.check(payload)
-            if not live_status.can_record:
+            if linked and linked.status == RecordingStatus.failed:
                 self.watch_store.update_job(
                     watch.id,
                     lambda current: current.model_copy(
                         update={
+                            "status": WatchStatus.failed,
+                            "finished_at": utc_now(),
                             "last_checked_at": utc_now(),
-                            "last_message": live_status.message,
+                            "last_message": linked.error or "The automatic recording failed.",
                         }
                     ),
                 )
-                continue
+                return
 
-            recording_job = self.recorder_service.create_job(payload)
+            if linked and linked.status == RecordingStatus.stopped:
+                self.watch_store.update_job(
+                    watch.id,
+                    lambda current: current.model_copy(
+                        update={
+                            "status": WatchStatus.stopped,
+                            "finished_at": utc_now(),
+                            "last_checked_at": utc_now(),
+                            "last_message": "The automatic recording was stopped.",
+                        }
+                    ),
+                )
+                return
+
             self.watch_store.update_job(
                 watch.id,
                 lambda current: current.model_copy(
                     update={
-                        "status": WatchStatus.recording,
-                        "linked_recording_job_id": recording_job.id,
+                        "status": WatchStatus.completed,
+                        "finished_at": utc_now(),
                         "last_checked_at": utc_now(),
-                        "last_message": "Live found. Recording started automatically.",
+                        "last_message": "Watch completed after the recording finished.",
                     }
                 ),
             )
+            return
+
+        if self.job_store.has_active_job():
+            self.watch_store.update_job(
+                watch.id,
+                lambda current: current.model_copy(
+                    update={
+                        "last_checked_at": utc_now(),
+                        "last_message": "Waiting for the current recording slot to become available.",
+                    }
+                ),
+            )
+            return
+
+        payload = RecordingCreateRequest(username=watch.username, url=watch.url, duration=watch.duration)
+        live_status = self.live_status_service.check(payload)
+        if not live_status.can_record:
+            self.watch_store.update_job(
+                watch.id,
+                lambda current: current.model_copy(
+                    update={
+                        "last_checked_at": utc_now(),
+                        "last_message": live_status.message,
+                    }
+                ),
+            )
+            return
+
+        recording_job = self.recorder_service.create_job(payload)
+        self.watch_store.update_job(
+            watch.id,
+            lambda current: current.model_copy(
+                update={
+                    "status": WatchStatus.recording,
+                    "linked_recording_job_id": recording_job.id,
+                    "last_checked_at": utc_now(),
+                    "last_message": "Live found. Recording started automatically.",
+                }
+            ),
+        )
