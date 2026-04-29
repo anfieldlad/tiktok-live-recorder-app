@@ -95,11 +95,21 @@ cd ..\..
 
 ### 4. Set up this app
 
+On Windows:
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
+```
+
+On macOS or Linux:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
 ### 5. Install FFmpeg
@@ -118,14 +128,28 @@ ffmpeg -version
 
 ### 6. Run locally
 
+On Windows:
+
 ```powershell
 .\.venv\Scripts\Activate.ps1
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
+On macOS or Linux:
+
+```bash
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
 Open:
 
 - [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+### 7. Run tests
+
+```bash
+.venv/bin/python -m unittest discover -s tests
+```
 
 ## Local Configuration
 
@@ -373,8 +397,7 @@ CLEANUP_MAX_AGE_HOURS=3
 ### 8. Test the app manually
 
 ```bash
-. .venv/bin/activate
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Open:
