@@ -1,19 +1,22 @@
-# TikTok Live Recorder App
+# TikTok Media Saver
 
-This project is a local app for recording TikTok Live streams.
+This project is a local app for saving TikTok media from a browser UI.
 
 It includes:
-- a browser UI with separate `Record Now` and `Watch Mode` pages
+- a browser UI with separate `Record Now`, `Watch Mode`, and `Download Post` pages
 - a FastAPI backend
-- local job tracking, watch tracking, and downloads
+- local job tracking, watch tracking, post downloads, and file downloads
 - lightweight diagnostics for health and runtime status
 
-UI and backend powered by [`Michele0303/tiktok-live-recorder`](https://github.com/Michele0303/tiktok-live-recorder).
+Live recording is powered by [`Michele0303/tiktok-live-recorder`](https://github.com/Michele0303/tiktok-live-recorder).
+Post downloads are handled by the app through `yt-dlp` plus a picture-post fallback.
 
 ## What It Does
 
 - record a TikTok Live by username or live URL
 - watch an account and auto-start recording when the live begins
+- download a public TikTok video post by URL
+- download a public TikTok picture post by URL
 - show clear recording status in the browser
 - allow only one active recording at a time
 - stop a running recording
@@ -28,6 +31,7 @@ This app is split into two layers:
 
 - UI and backend in this repository
 - recording engine from `Michele0303/tiktok-live-recorder`
+- post download integration in this repository
 
 This repository is the application layer.
 The Michele0303 project is the recorder engine that handles TikTok live access and stream capture.
@@ -54,7 +58,7 @@ Frontend files are split for reuse and easier maintenance:
 - shared CSS in `app/static/css/app.css`
 - shared browser helpers in `app/static/js/app-common.js`
 - shared session logic in `app/static/js/session-panel.js`
-- page-specific logic in `app/static/js/record-page.js` and `app/static/js/watch-page.js`
+- page-specific logic in `app/static/js/record-page.js`, `app/static/js/watch-page.js`, and `app/static/js/download-page.js`
 
 ## Prerequisites
 
@@ -185,6 +189,13 @@ vendor/tiktok-live-recorder
 4. The app will keep checking the account.
 5. When the live becomes available, recording will start automatically.
 
+### Download a public post
+
+1. Open the `Download Post` page.
+2. Paste a public TikTok video or picture post URL.
+3. Click `Download`.
+4. When the download finishes, use the generated file links to save the media from the browser.
+
 ### Sign in for private or restricted lives
 
 If a live requires authentication:
@@ -284,6 +295,29 @@ Or:
 
 ```http
 GET /watch-recordings
+```
+
+### Download a public post
+
+```http
+POST /downloads
+Content-Type: application/json
+
+{
+  "url": "https://vt.tiktok.com/example/"
+}
+```
+
+### Get a downloaded post
+
+```http
+GET /downloads/{download_id}
+```
+
+### Download a post file
+
+```http
+GET /downloads/{download_id}/files/{file_index}
 ```
 
 ### Stop a watch
@@ -426,7 +460,7 @@ Use:
 
 ```ini
 [Unit]
-Description=TikTok Live Recorder UI and Backend
+Description=TikTok Media Saver UI and Backend
 After=network.target
 
 [Service]

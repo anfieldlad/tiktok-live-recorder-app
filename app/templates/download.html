@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block hero_eyebrow %}Download Post{% endblock %}
+{% block hero_description %}Save a public TikTok video or picture post from a URL. The first version runs one download at a time and returns local file links when finished.{% endblock %}
+
+{% block page_content %}
+<section class="layout">
+  <div class="stack">
+    <article class="panel">
+      <h2>Download post</h2>
+      <p class="small">Paste a public TikTok video or picture post URL. Short share links such as <code>vt.tiktok.com</code> are supported.</p>
+      <form id="post-download-form" style="margin-top:16px;">
+        <div class="field">
+          <label for="post-url">TikTok post URL</label>
+          <input id="post-url" type="url" placeholder="https://www.tiktok.com/@user/video/...">
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit" id="download-post-button">Download</button>
+          <button class="secondary" type="button" id="clear-post-download-form">Clear</button>
+        </div>
+      </form>
+      <div id="post-download-notice" class="notice">Enter a public TikTok post URL, then click Download.</div>
+    </article>
+  </div>
+
+  <article class="panel">
+    <div class="split" style="margin-bottom:14px;">
+      <div>
+        <h2>Downloaded files</h2>
+        <p class="small">Files from the latest completed post download appear here.</p>
+      </div>
+    </div>
+    <div id="post-download-result" class="jobs">
+      <div class="empty">No post downloaded yet.</div>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ (base_path or '') ~ '/static/js/download-page.js' }}"></script>
+<script>initDownloadPage();</script>
+{% endblock %}

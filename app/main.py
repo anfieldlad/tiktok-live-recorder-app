@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api.auth import router as auth_router
+from app.api.downloads import router as downloads_router
 from app.api.recordings import router as recordings_router
 from app.api.recordings import watch_router
 from app.services.browser_login_service import BrowserLoginService
@@ -16,6 +17,7 @@ from app.services.cookie_service import CookieService
 from app.services.file_service import FileService
 from app.services.job_store import JobStore
 from app.services.live_status_service import LiveStatusService
+from app.services.post_download_service import PostDownloadService
 from app.services.recorder_service import RecorderService
 from app.services.watch_service import WatchService
 from app.services.watch_store import WatchStore
@@ -38,6 +40,7 @@ def create_app() -> FastAPI:
     browser_login_service = BrowserLoginService(settings.jobs_file.parents[1], cookie_service)
     live_status_service = LiveStatusService(settings)
     recorder_service = RecorderService(settings, job_store, file_service)
+    post_download_service = PostDownloadService(settings.output_dir, cookie_service)
     watch_service = WatchService(
         watch_store,
         job_store,
@@ -49,9 +52,9 @@ def create_app() -> FastAPI:
     templates = Jinja2Templates(directory=str(app_root / "templates"))
 
     app = FastAPI(
-        title="TikTok Live Recorder App",
+        title="TikTok Media Saver",
         version="0.1.0",
-        description="UI and backend powered by Michele0303/tiktok-live-recorder.",
+        description="Local tools for saving TikTok Live recordings and public TikTok posts.",
         root_path=settings.root_path,
     )
 
@@ -63,12 +66,14 @@ def create_app() -> FastAPI:
     app.state.browser_login_service = browser_login_service
     app.state.live_status_service = live_status_service
     app.state.recorder_service = recorder_service
+    app.state.post_download_service = post_download_service
     app.state.watch_service = watch_service
     app.state.templates = templates
 
     app.mount("/static", StaticFiles(directory=str(app_root / "static")), name="static")
 
     app.include_router(auth_router)
+    app.include_router(downloads_router)
     app.include_router(recordings_router)
     app.include_router(watch_router)
 
@@ -98,6 +103,10 @@ def create_app() -> FastAPI:
     @app.get("/watch", response_class=HTMLResponse)
     def watch_page(request: Request) -> HTMLResponse:
         return render_dashboard(request, "watch.html", "watch")
+
+    @app.get("/download", response_class=HTMLResponse)
+    def download_page(request: Request) -> HTMLResponse:
+        return render_dashboard(request, "download.html", "download")
 
     @app.api_route("/favicon.svg", methods=["GET", "HEAD"])
     def favicon_svg() -> FileResponse:

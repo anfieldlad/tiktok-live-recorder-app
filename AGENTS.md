@@ -4,13 +4,14 @@ Guidance for AI coding agents working in this repository.
 
 ## Project Overview
 
-This is a local FastAPI application for recording TikTok Live streams. The app in this repository provides the browser UI, API routes, job/watch state, diagnostics, and integration glue around the upstream recorder engine from `Michele0303/tiktok-live-recorder`.
+This is a local FastAPI application for saving TikTok media. The app provides browser UI pages for recording TikTok Live streams, watching accounts until they go live, and downloading public TikTok video or picture posts.
 
 Primary code areas:
 
 - `app/main.py` wires the FastAPI app, services, routes, templates, static files, and health endpoints.
 - `app/api/` contains API routers.
 - `app/services/` contains app state, recorder integration, browser login, cookies, file handling, live status, and watch logic.
+- `app/services/post_download_service.py` contains post download integration through `yt-dlp` and the picture-post fallback.
 - `app/models/` contains shared data models.
 - `app/templates/` contains Jinja templates.
 - `app/static/css/` and `app/static/js/` contain frontend assets.
@@ -66,6 +67,12 @@ Run the existing test suite with:
 .venv/bin/python -m unittest discover -s tests
 ```
 
+Run browser e2e tests with:
+
+```bash
+npm run test:e2e
+```
+
 If adding behavior that changes routing, service state, store recovery, diagnostics, downloads, or watch/record flows, add or update tests under `tests/`.
 
 ## Coding Guidelines
@@ -78,7 +85,8 @@ If adding behavior that changes routing, service state, store recovery, diagnost
 - Keep frontend changes split between shared files and page-specific files:
   - shared helpers in `app/static/js/app-common.js`
   - shared session logic in `app/static/js/session-panel.js`
-  - page logic in `record-page.js` or `watch-page.js`
+  - live page logic in `record-page.js` or `watch-page.js`
+  - post download logic in `download-page.js`
   - shared styles in `app/static/css/app.css`
 - Do not commit local recordings, cookies, logs, temporary job files, virtualenvs, or cloned vendor code.
 
