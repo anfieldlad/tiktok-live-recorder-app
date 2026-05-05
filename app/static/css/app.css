@@ -621,14 +621,13 @@ input:focus, textarea:focus {
 @media (max-width: 720px) {
   /* Topbar: brand left, chip right on row 1; tabs full-width on row 2 */
   .topbar {
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: auto 1fr auto;
     grid-template-rows: auto auto;
     gap: 8px 10px;
     padding: 8px 10px;
     border-radius: var(--radius-xl);
     top: 8px;
   }
-  .brand { justify-self: start; }
   .brand-text { font-size: 0.9rem; }
   .tabs {
     grid-column: 1 / -1;
@@ -657,7 +656,7 @@ input:focus, textarea:focus {
   .shell { padding: 10px 12px 28px; gap: 14px; }
 
   /* Shrink session chip and swap label to short version on small screens */
-  .session-chip { padding: 7px 10px; gap: 6px; }
+  .session-chip { padding: 7px 10px; gap: 6px; justify-content: center; }
   .session-label { font-size: 0; }
   .session-label::before { content: attr(data-short); font-size: 0.78rem; }
 
