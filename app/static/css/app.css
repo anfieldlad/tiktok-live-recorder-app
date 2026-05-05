@@ -655,8 +655,10 @@ input:focus, textarea:focus {
   /* Tighten the outer shell */
   .shell { padding: 10px 12px 28px; gap: 14px; }
 
-  /* Shrink session chip slightly on small screens */
-  .session-chip { padding: 7px 10px; font-size: 0.78rem; gap: 6px; }
+  /* Shrink session chip and swap label to short version on small screens */
+  .session-chip { padding: 7px 10px; gap: 6px; }
+  .session-label { font-size: 0; }
+  .session-label::before { content: attr(data-short); font-size: 0.78rem; }
 
   /* Surfaces */
   .surface { padding: 16px; border-radius: var(--radius-lg); }

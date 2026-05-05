@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="{{ (base_path or '') ~ '/static/css/app.css?v=5' }}">
+  <link rel="stylesheet" href="{{ (base_path or '') ~ '/static/css/app.css?v=6' }}">
 </head>
 <body>
   <div class="shell">
@@ -24,7 +24,7 @@
       </nav>
       <button class="session-chip" id="session-toggle" type="button" aria-controls="session-drawer" aria-expanded="false">
         <span id="session-dot" class="session-dot {{ 'is-ready' if cookies_configured else 'is-needed' }}"></span>
-        <span id="session-pill" class="session-label">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
+        <span id="session-pill" class="session-label" data-short="Session">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
       </button>
     </header>
 
