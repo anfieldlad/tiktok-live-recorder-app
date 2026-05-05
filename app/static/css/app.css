@@ -628,7 +628,7 @@ input:focus, textarea:focus {
     border-radius: var(--radius-xl);
     top: 8px;
   }
-  .brand-text { display: none; }
+  .brand-text { font-size: 0.9rem; }
   .tabs {
     grid-column: 1 / -1;
     grid-row: 2;
