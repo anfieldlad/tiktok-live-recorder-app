@@ -44,6 +44,7 @@ function initWatchPage() {
   function buildWatchActions(job) {
     const actions = [];
     if (job.status === "watching" || job.status === "recording") actions.push(`<button class="btn btn-warn" data-action="stop" data-id="${job.id}">Stop watch</button>`);
+    if (job.status === "completed" && job.linked_recording_job_id) actions.push(`<a class="btn btn-primary" href="${appPath(`/recordings/${job.linked_recording_job_id}/download`)}">Download recording</a>`);
     actions.push(`<button class="btn btn-danger" data-action="delete" data-id="${job.id}">Delete</button>`);
     return actions.join("");
   }
