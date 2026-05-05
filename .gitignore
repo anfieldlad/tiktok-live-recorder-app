@@ -14,6 +14,7 @@ playwright-report/
 
 # Local environment
 .env
+.ssh-config.local
 
 # Runtime data
 logs/

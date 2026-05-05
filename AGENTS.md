@@ -2,6 +2,8 @@
 
 Guidance for AI coding agents working in this repository.
 
+For production server details (SSH, nginx, systemd, deploy steps, troubleshooting) see [SSH.md](SSH.md).
+
 ## Project Overview
 
 This is a local FastAPI application for saving TikTok media. The app provides browser UI pages for recording TikTok Live streams, watching accounts until they go live, and downloading public TikTok video or picture posts.
