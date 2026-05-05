@@ -5,21 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TikTok Media Saver</title>
   <link rel="icon" type="image/svg+xml" href="{{ (base_path or '') ~ '/favicon.svg' }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="{{ (base_path or '') ~ '/static/css/app.css' }}">
 </head>
 <body>
-  <main class="wrap">
-    <section class="hero">
-      <p class="eyebrow">{% block hero_eyebrow %}{% endblock %}</p>
-      <h1>TikTok Media Saver</h1>
-      <p>{% block hero_description %}{% endblock %}</p>
-      <nav class="nav">
-        <a class="{{ 'active' if page_name == 'record' else '' }}" href="{{ base_path or '' }}/">Record Now</a>
-        <a class="{{ 'active' if page_name == 'watch' else '' }}" href="{{ base_path or '' }}/watch">Watch Mode</a>
-        <a class="{{ 'active' if page_name == 'download' else '' }}" href="{{ base_path or '' }}/download">Download Post</a>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="{{ base_path or '' }}/">
+        <img class="brand-mark" src="{{ (base_path or '') ~ '/favicon.svg' }}" alt="">
+        <span class="brand-text">TikTok Media Saver</span>
+      </a>
+      <nav class="tabs" aria-label="Primary">
+        <a class="tab {{ 'is-active' if page_name == 'record' else '' }}" href="{{ base_path or '' }}/">Record live</a>
+        <a class="tab {{ 'is-active' if page_name == 'watch' else '' }}" href="{{ base_path or '' }}/watch">Auto-record</a>
+        <a class="tab {{ 'is-active' if page_name == 'download' else '' }}" href="{{ base_path or '' }}/download">Save post</a>
       </nav>
-    </section>
-    {% block page_content %}{% endblock %}
+      <button class="session-chip" id="session-toggle" type="button" aria-controls="session-drawer" aria-expanded="false">
+        <span id="session-dot" class="session-dot {{ 'is-ready' if cookies_configured else 'is-needed' }}"></span>
+        <span id="session-pill" class="session-label">{{ "Session ready" if cookies_configured else "Session needed" }}</span>
+      </button>
+    </header>
+
+    {% include "_session_panel.html" %}
+
+    <main class="page stack">
+      <header class="page-head">
+        <p class="page-eyebrow">{% block hero_eyebrow %}{% endblock %}</p>
+        <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+        <p class="page-lead">{% block hero_description %}{% endblock %}</p>
+      </header>
+      {% block page_content %}{% endblock %}
+    </main>
+
     <footer class="footer">
       <div class="footer-list">
         <span class="footer-item">Beta app, may contain bugs</span>
@@ -28,13 +47,16 @@
         <span class="footer-item">Storage limit: ~20 GB</span>
       </div>
     </footer>
-  </main>
+  </div>
+
   <script>
     window.appConfig = {
       basePath: {{ base_path|tojson }}
     };
   </script>
   <script src="{{ (base_path or '') ~ '/static/js/app-common.js' }}"></script>
+  <script src="{{ (base_path or '') ~ '/static/js/session-panel.js' }}"></script>
+  <script>initSessionPanel();</script>
   {% block page_scripts %}{% endblock %}
 </body>
 </html>

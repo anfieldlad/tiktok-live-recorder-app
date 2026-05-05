@@ -1,49 +1,49 @@
 {% extends "base.html" %}
 
-{% block hero_eyebrow %}Watch Mode{% endblock %}
-{% block hero_description %}Keep checking a creator until they go live, then start the recording automatically.{% endblock %}
+{% block hero_eyebrow %}Live later{% endblock %}
+{% block page_title %}Auto-record{% endblock %}
+{% block hero_description %}For creators who are offline now. We'll keep checking and start recording automatically the moment they go live.{% endblock %}
 
 {% block page_content %}
-<section class="layout">
-  <div class="stack">
-    <article class="panel">
-      <h2>Watch mode</h2>
-      <p class="small">Use this when the creator is offline now. The app will keep checking until the live becomes available.</p>
-      <form id="watch-form" style="margin-top:16px;">
-        <div class="field">
-          <label for="watch-source">TikTok username or live URL</label>
-          <input id="watch-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
-        </div>
-        <div class="field">
-          <label for="watch-duration">Duration in seconds (optional)</label>
-          <input id="watch-duration" type="number" min="1" placeholder="Leave blank to record until the live ends">
-        </div>
-        <div class="actions">
-          <button class="primary" type="submit">Watch and auto-record</button>
-          <button class="secondary" type="button" id="clear-watch-form">Clear</button>
-        </div>
-      </form>
-      <div id="watch-notice" class="notice">Create a watch to keep checking an account until the live becomes available.</div>
-    </article>
+<section class="layout layout-split">
+  <aside class="surface">
+    <div class="card-head">
+      <h2>New watch</h2>
+      <p>Use this when the creator is offline now. The app will keep checking until the live becomes available.</p>
+    </div>
+    <form id="watch-form" class="form">
+      <div class="field">
+        <label for="watch-source">TikTok username or live URL</label>
+        <input id="watch-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
+      </div>
+      <div class="field">
+        <label for="watch-duration">Duration in seconds <span class="muted">(optional)</span></label>
+        <input id="watch-duration" type="number" min="1" placeholder="Leave blank to record until live ends">
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" type="submit">Watch and auto-record</button>
+        <button class="btn btn-ghost" type="button" id="clear-watch-form">Clear</button>
+      </div>
+    </form>
+    <div id="watch-notice" class="notice">Create a watch to keep checking an account until the live becomes available.</div>
+  </aside>
 
-    {% include "_session_panel.html" %}
-  </div>
-
-  <article class="panel">
-    <div class="split" style="margin-bottom:14px;">
+  <section class="surface">
+    <div class="card-head split">
       <div>
         <h2>Watch list</h2>
-        <p class="small">These watches keep checking TikTok until a live starts or you stop them.</p>
+        <p>These watches keep checking TikTok until a live starts or you stop them.</p>
       </div>
-      <div class="actions"><button class="secondary" type="button" id="refresh-watch-list">Refresh</button></div>
+      <div class="row">
+        <button class="btn btn-ghost btn-icon" type="button" id="refresh-watch-list" aria-label="Refresh" title="Refresh">↻</button>
+      </div>
     </div>
     <div id="watch-container" class="watch-list"></div>
-  </article>
+  </section>
 </section>
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/session-panel.js' }}"></script>
 <script src="{{ (base_path or '') ~ '/static/js/watch-page.js' }}"></script>
 <script>initWatchPage();</script>
 {% endblock %}

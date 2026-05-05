@@ -1,53 +1,51 @@
 {% extends "base.html" %}
 
-{% block hero_eyebrow %}Record Now{% endblock %}
-{% block hero_description %}Start a recording immediately when the creator is already live. If they are offline, you can switch to watch mode in one click.{% endblock %}
+{% block hero_eyebrow %}Live now{% endblock %}
+{% block page_title %}Record live{% endblock %}
+{% block hero_description %}Start a recording immediately when the creator is already live. If they are offline, switch to Auto-record in one click.{% endblock %}
 
 {% block page_content %}
-<section class="layout">
-  <div class="stack">
-    <article class="panel">
-      <h2>Record now</h2>
-      <p class="small">Paste a TikTok username or live URL. The app will check access first, then start recording if the live is ready.</p>
-      <form id="recording-form" style="margin-top:16px;">
-        <div class="field">
-          <label for="record-source">TikTok username or live URL</label>
-          <input id="record-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
-        </div>
-        <div class="field">
-          <label for="record-duration">Duration in seconds (optional)</label>
-          <input id="record-duration" type="number" min="1" placeholder="Leave blank to record until the live ends">
-        </div>
-        <div class="actions">
-          <button class="primary" type="submit">Record</button>
-          <button class="secondary" type="button" id="clear-record-form">Clear</button>
-        </div>
-      </form>
-      <div id="record-notice" class="notice">Enter a TikTok username or live URL, then click Record.</div>
-      <div id="record-helper-actions" class="helper-actions"></div>
-    </article>
+<section class="layout layout-split">
+  <aside class="surface">
+    <div class="card-head">
+      <h2>New recording</h2>
+      <p>Paste a TikTok username or live URL. We'll check access first, then start.</p>
+    </div>
+    <form id="recording-form" class="form">
+      <div class="field">
+        <label for="record-source">TikTok username or live URL</label>
+        <input id="record-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
+      </div>
+      <div class="field">
+        <label for="record-duration">Duration in seconds <span class="muted">(optional)</span></label>
+        <input id="record-duration" type="number" min="1" placeholder="Leave blank to record until live ends">
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" type="submit">Start recording</button>
+        <button class="btn btn-ghost" type="button" id="clear-record-form">Clear</button>
+      </div>
+    </form>
+    <div id="record-notice" class="notice">Enter a TikTok username or live URL, then click Start recording.</div>
+    <div id="record-helper-actions" class="row helper-row"></div>
+  </aside>
 
-    {% include "_session_panel.html" %}
-  </div>
-
-  <article class="panel">
-    <div class="split" style="margin-bottom:14px;">
+  <section class="surface">
+    <div class="card-head split">
       <div>
         <h2>Recording activity</h2>
-        <p class="small">Track each recording with a simple phase, a status message, and quick actions.</p>
+        <p>Track each recording with a phase, a status message, and quick actions.</p>
       </div>
-      <div class="actions">
-        <button class="secondary" type="button" id="refresh-recordings">Refresh</button>
-        <button class="secondary" type="button" id="toggle-auto-refresh">Auto Refresh: On</button>
+      <div class="row">
+        <button class="btn btn-ghost btn-icon" type="button" id="refresh-recordings" aria-label="Refresh" title="Refresh">↻</button>
+        <button class="btn btn-ghost" type="button" id="toggle-auto-refresh" aria-pressed="true">Auto-refresh: On</button>
       </div>
     </div>
     <div id="jobs-container" class="jobs"></div>
-  </article>
+  </section>
 </section>
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/session-panel.js' }}"></script>
 <script src="{{ (base_path or '') ~ '/static/js/record-page.js' }}"></script>
 <script>initRecordPage();</script>
 {% endblock %}

@@ -7,7 +7,7 @@ function initDownloadPage() {
   const resultContainer = document.getElementById("post-download-result");
 
   function escapeHtml(value) {
-    return String(value)
+    return String(value ?? "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
@@ -20,41 +20,56 @@ function initDownloadPage() {
     return parts[parts.length - 1] || path || "download";
   }
 
+  function emptyState() {
+    return `
+      <div class="empty">
+        <span class="empty-icon">↓</span>
+        <span class="empty-title">No post downloaded yet</span>
+        <span>Paste a TikTok post URL on the left to get started.</span>
+      </div>`;
+  }
+
   function renderResult(download) {
     if (!download.files || !download.files.length) {
-      resultContainer.innerHTML = '<div class="empty">The download finished, but no files were returned.</div>';
+      resultContainer.innerHTML = `
+        <article class="job-card">
+          <header class="job-header">
+            <div>
+              <h3 class="job-title">Download finished</h3>
+              <span class="job-id">${escapeHtml(download.download_id)}</span>
+            </div>
+            <span class="status-pill soft">No files</span>
+          </header>
+          <p class="job-message">The download finished, but no files were returned.</p>
+        </article>`;
       return;
     }
 
     const fileRows = download.files.map((path, index) => {
       const url = download.file_urls[index];
       return `
-        <div class="meta-card wide">
-          <p class="meta-label">File ${index + 1}</p>
-          <p class="meta-value">${escapeHtml(path)}</p>
-          <div class="actions" style="margin-top:10px;">
-            <a class="button-link primary" href="${appPath(url)}">Download ${escapeHtml(fileName(path))}</a>
+        <div class="file-row">
+          <div class="file-meta">
+            <span class="file-name">${escapeHtml(fileName(path))}</span>
+            <span class="file-path">${escapeHtml(path)}</span>
           </div>
-        </div>
-      `;
+          <a class="btn btn-primary" href="${appPath(url)}">Save</a>
+        </div>`;
     }).join("");
 
     resultContainer.innerHTML = `
-      <article class="card">
-        <div class="job-top">
-          <div class="job-identity">
-            <h3 class="job-name">Post download complete</h3>
-            <div class="job-id">${escapeHtml(download.download_id)}</div>
+      <article class="job-card">
+        <header class="job-header">
+          <div>
+            <h3 class="job-title">Post download complete</h3>
+            <span class="job-id">${escapeHtml(download.download_id)}</span>
           </div>
-          <span class="pill status-pill good">Ready</span>
-        </div>
-        <div class="job-meta">
-          <div class="meta-card wide">
-            <p class="meta-label">Output folder</p>
-            <p class="meta-value">${escapeHtml(download.output_dir)}</p>
-          </div>
-          ${fileRows}
-        </div>
+          <span class="status-pill good">Ready</span>
+        </header>
+        <dl class="job-stats">
+          <div class="wide"><dt>Output folder</dt><dd>${escapeHtml(download.output_dir)}</dd></div>
+        </dl>
+        <div class="file-list">${fileRows}</div>
       </article>
     `;
   }
@@ -92,7 +107,7 @@ function initDownloadPage() {
 
   function clearForm() {
     form.reset();
-    resultContainer.innerHTML = '<div class="empty">No post downloaded yet.</div>';
+    resultContainer.innerHTML = emptyState();
     setNotice(notice, "Enter a public TikTok post URL, then click Download.");
   }
 
