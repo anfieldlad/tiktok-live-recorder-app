@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     recorder_dir: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder"
     recorder_entrypoint: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src" / "main.py"
     recorder_cookies_file: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src" / ".." / "cookies.json"
+    instagram_cookies_file: Path = PROJECT_ROOT / "data" / "instagram_cookies.json"
     python_bin: str = "python"
     recorder_mode: str = Field(default="manual")
     recorder_proxy: str | None = None
@@ -39,6 +40,7 @@ class Settings(BaseSettings):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.recorder_cookies_file.parent.mkdir(parents=True, exist_ok=True)
+        self.instagram_cookies_file.parent.mkdir(parents=True, exist_ok=True)
 
 
 def get_settings() -> Settings:

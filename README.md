@@ -3,13 +3,14 @@
 This project is a local app for saving TikTok media from a browser UI.
 
 It includes:
-- a browser UI with separate `Record Now`, `Watch Mode`, and `Download Post` pages
+- a browser UI with separate `Record Now`, `Watch Mode`, `Download Post`, and `Instagram` pages
 - a FastAPI backend
-- local job tracking, watch tracking, post downloads, and file downloads
+- local job tracking, watch tracking, post downloads, Instagram downloads, and file downloads
 - lightweight diagnostics for health and runtime status
 
 Live recording is powered by [`Michele0303/tiktok-live-recorder`](https://github.com/Michele0303/tiktok-live-recorder).
-Post downloads are handled by the app through `yt-dlp` plus a picture-post fallback.
+TikTok post downloads are handled by the app through `yt-dlp` plus a picture-post fallback.
+Instagram downloads (posts, reels, carousels, stories, highlights) are handled by `gallery-dl` with a `yt-dlp` fallback.
 
 ## What It Does
 
@@ -17,6 +18,8 @@ Post downloads are handled by the app through `yt-dlp` plus a picture-post fallb
 - watch an account and auto-start recording when the live begins
 - download a public TikTok video post by URL
 - download a public TikTok picture post by URL
+- download Instagram posts, reels, carousels, stories, and highlights by URL
+- support a separate Instagram session flow for stories, highlights, and private content
 - show clear recording status in the browser
 - allow only one active recording at a time
 - stop a running recording
@@ -41,6 +44,7 @@ The Michele0303 project is the recorder engine that handles TikTok live access a
 ```text
 app/
   api/
+  instagram/
   models/
   services/
   static/
@@ -164,6 +168,7 @@ Important values in `.env`:
 - `PYTHON_BIN`
 - `OUTPUT_DIR`
 - `JOBS_FILE`
+- `INSTAGRAM_COOKIES_FILE` (defaults to `data/instagram_cookies.json`)
 
 By default, this project expects the upstream recorder at:
 
@@ -195,6 +200,21 @@ vendor/tiktok-live-recorder
 2. Paste a public TikTok video or picture post URL.
 3. Click `Download`.
 4. When the download finishes, use the generated file links to save the media from the browser.
+
+### Download Instagram media
+
+1. Open the `Instagram` page.
+2. Paste an Instagram post, reel, carousel, story, or highlight URL.
+3. Click `Download`.
+4. When the download finishes, use the generated file links to save the media from the browser.
+
+Instagram aggressively rate-limits and login-walls content. Stories, highlights,
+and most posts require a saved Instagram session — use the Instagram session
+drawer (the session chip on the `Instagram` page) to sign in, the same way as the
+TikTok session flow. The Instagram session is stored separately from the TikTok one.
+
+Instagram downloads are powered by `gallery-dl` (best for posts, carousels,
+stories, and highlights), with `yt-dlp` as an automatic fallback for single reels.
 
 ### Sign in for private or restricted lives
 
@@ -319,6 +339,28 @@ GET /downloads/{download_id}
 ```http
 GET /downloads/{download_id}/files/{file_index}
 ```
+
+### Download Instagram media
+
+```http
+POST /instagram/downloads
+Content-Type: application/json
+
+{
+  "url": "https://www.instagram.com/p/..."
+}
+```
+
+Get one Instagram download and its files:
+
+```http
+GET /instagram/downloads/{download_id}
+GET /instagram/downloads/{download_id}/files/{file_index}
+```
+
+Instagram session endpoints mirror the TikTok `/auth` routes under `/instagram/auth`
+(`GET /instagram/auth/status`, `POST /instagram/auth/cookies`, the guided
+`POST /instagram/auth/login-browser/...` flow, etc.).
 
 ### Stop a watch
 
@@ -574,3 +616,5 @@ sudo certbot --nginx -d your-domain.com
 
 - UI and backend: this repository
 - Recording engine: [Michele0303/tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder)
+- TikTok post downloads: [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- Instagram downloads: [gallery-dl](https://github.com/mikf/gallery-dl) with a [yt-dlp](https://github.com/yt-dlp/yt-dlp) fallback

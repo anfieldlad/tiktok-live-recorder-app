@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block hero_eyebrow %}Instagram media{% endblock %}
+{% block page_title %}Save Instagram{% endblock %}
+{% block hero_description %}Save an Instagram post, reel, carousel, story, or highlight from a URL. Downloads run one at a time and return local file links when finished.{% endblock %}
+
+{% block page_content %}
+<section class="layout layout-split">
+  <aside class="surface">
+    <div class="card-head">
+      <h2>Download Instagram</h2>
+      <p>Paste an Instagram post, reel, story, or highlight URL. Stories, highlights, and most content need a saved Instagram session.</p>
+    </div>
+    <form id="instagram-download-form" class="form">
+      <div class="field">
+        <label for="instagram-url">Instagram URL</label>
+        <input id="instagram-url" type="url" placeholder="https://www.instagram.com/p/... or /reel/...">
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" type="submit" id="download-instagram-button">Download</button>
+        <button class="btn btn-ghost" type="button" id="clear-instagram-download-form">Clear</button>
+      </div>
+    </form>
+    <div id="instagram-download-notice" class="notice">Enter an Instagram URL, then click Download.</div>
+  </aside>
+
+  <section class="surface">
+    <div class="card-head split">
+      <div>
+        <h2>Downloaded files</h2>
+        <p>Files from the latest completed Instagram download appear here.</p>
+      </div>
+    </div>
+    <div id="instagram-download-result" class="jobs">
+      <div class="empty">
+        <span class="empty-icon">↓</span>
+        <span class="empty-title">Nothing downloaded yet</span>
+        <span>Paste an Instagram URL on the left to get started.</span>
+      </div>
+    </div>
+  </section>
+</section>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ (base_path or '') ~ '/static/js/instagram-download-page.js?v=1' }}"></script>
+<script>initInstagramDownloadPage();</script>
+{% endblock %}

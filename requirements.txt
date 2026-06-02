@@ -6,3 +6,4 @@ httpx==0.28.1
 browser-cookie3==0.20.1
 curl-cffi==0.15.0
 yt-dlp==2026.4.10.235301.dev0
+gallery-dl==1.32.1

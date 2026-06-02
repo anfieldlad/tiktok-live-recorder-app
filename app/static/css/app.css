@@ -73,6 +73,26 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Instagram sister-app theme: same components, distinct identity.
+   Overriding the accent tokens re-skins buttons, focus rings, the page
+   eyebrow, step badges, and the session chip without touching markup. */
+body[data-app="instagram"] {
+  --accent: #c13584;
+  --accent-ink: #fff5fb;
+  --accent-soft: rgba(193, 53, 132, 0.12);
+  --accent2: #6a3de8;
+  --accent2-soft: rgba(106, 61, 232, 0.12);
+  background:
+    radial-gradient(1100px 600px at -10% -20%, rgba(214, 41, 118, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 110% 0%, rgba(106, 61, 232, 0.12), transparent 60%),
+    linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+  background-attachment: fixed;
+}
+body[data-app="instagram"] .btn-primary:hover { background: #a82d72; }
+body[data-app="instagram"] .brand-mark {
+  filter: hue-rotate(265deg) saturate(1.25);
+}
+
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; color: var(--ink); margin: 0; }
 h1 { font-size: clamp(1.9rem, 1.2rem + 2.2vw, 2.7rem); line-height: 1.05; letter-spacing: -0.01em; }
 h2 { font-size: 1.15rem; line-height: 1.25; }
@@ -153,6 +173,36 @@ code { background: var(--surface-sunken); border-radius: 6px; padding: 1px 6px; 
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
+
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+.app-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  transition: transform var(--motion), background var(--motion), border-color var(--motion), color var(--motion);
+}
+.app-switch:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-decoration: none;
+}
+.app-switch-icon { display: inline-flex; align-items: center; opacity: 0.85; }
+.app-switch-icon-ig { opacity: 1; }
 
 .session-chip {
   display: inline-flex;
@@ -659,6 +709,11 @@ input:focus, textarea:focus {
   .session-chip { padding: 7px 10px; gap: 6px; justify-content: center; }
   .session-label { font-size: 0; }
   .session-label::before { content: attr(data-short); font-size: 0.78rem; }
+
+  /* App switcher collapses to an icon-only button to save room */
+  .topbar-actions { gap: 8px; }
+  .app-switch { padding: 7px 9px; }
+  .app-switch-label { display: none; }
 
   /* Surfaces */
   .surface { padding: 16px; border-radius: var(--radius-lg); }

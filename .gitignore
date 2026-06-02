@@ -23,8 +23,13 @@ tools/
 
 # Local app state
 data/browser-login/
+data/instagram-browser-login/
 data/jobs.json
 data/watch_jobs.json
+data/instagram_cookies.json
+
+# Local editor / tooling config
+.claude/
 
 # Upstream recorder clone
 vendor/tiktok-live-recorder/

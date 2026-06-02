@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
+import tempfile
 from pathlib import Path
 
 from app.services.chromium_cookies import (
@@ -11,7 +13,7 @@ from app.services.chromium_cookies import (
 )
 
 
-class CookieService:
+class InstagramCookieService:
     def __init__(self, cookie_file: Path) -> None:
         self.cookie_file = cookie_file.resolve()
         self._ensure_file()
@@ -22,7 +24,7 @@ class CookieService:
 
     def is_configured(self) -> bool:
         data = self.read_cookies()
-        return bool(data.get("session_ss"))
+        return bool(data.get("sessionid"))
 
     def read_cookies(self) -> dict:
         self._ensure_file()
@@ -31,8 +33,8 @@ class CookieService:
             return {}
         return json.loads(raw)
 
-    def save_session_cookie(self, session_ss: str) -> None:
-        payload = {"session_ss": session_ss}
+    def save_session_cookie(self, sessionid: str) -> None:
+        payload = {"sessionid": sessionid}
         self.cookie_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     def save_cookie_map(self, cookies: dict[str, str]) -> None:
@@ -60,9 +62,9 @@ class CookieService:
             raise ValueError(f"{browser_name} Cookies database was not found")
 
         master_key = get_master_key(local_state_path)
-        cookies = read_cookies_for_domain(cookies_db_path, master_key, "tiktok.com")
+        cookies = read_cookies_for_domain(cookies_db_path, master_key, "instagram.com")
         if not cookies:
-            raise ValueError(f"no TikTok cookies found in {browser_name}")
+            raise ValueError(f"no Instagram cookies found in {browser_name}")
         self.save_cookie_map(cookies)
         return cookies
 
@@ -73,11 +75,33 @@ class CookieService:
         if not cookies_db_path.exists():
             raise ValueError("browser Cookies database was not found")
         master_key = get_master_key(local_state_path)
-        cookies = read_cookies_for_domain(cookies_db_path, master_key, "tiktok.com")
+        cookies = read_cookies_for_domain(cookies_db_path, master_key, "instagram.com")
         if not cookies:
-            raise ValueError("no TikTok cookies found in the selected browser profile")
+            raise ValueError("no Instagram cookies found in the selected browser profile")
         self.save_cookie_map(cookies)
         return cookies
 
     def clear(self) -> None:
         self.cookie_file.write_text("{}\n", encoding="utf-8")
+
+    def write_netscape_cookie_file(self) -> Path | None:
+        if not self.is_configured():
+            return None
+
+        cookies = self.read_cookies()
+        normalized: dict[str, str] = {}
+        for name, value in cookies.items():
+            if not value:
+                continue
+            normalized[str(name)] = str(value)
+
+        if not normalized:
+            return None
+
+        cookie_file = Path(tempfile.gettempdir()) / f"instagram-cookies-{secrets.token_hex(8)}.txt"
+        lines = ["# Netscape HTTP Cookie File"]
+        for name, value in sorted(normalized.items()):
+            lines.append(f".instagram.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}")
+        cookie_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        cookie_file.chmod(0o600)
+        return cookie_file

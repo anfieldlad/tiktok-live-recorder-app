@@ -53,6 +53,7 @@ class AppReliabilityTests(unittest.TestCase):
             "RECORDER_DIR": str(temp_root / "vendor" / "recorder"),
             "RECORDER_ENTRYPOINT": str(temp_root / "vendor" / "recorder" / "src" / "main.py"),
             "RECORDER_COOKIES_FILE": str(temp_root / "data" / "cookies.json"),
+            "INSTAGRAM_COOKIES_FILE": str(temp_root / "data" / "instagram_cookies.json"),
             "PYTHON_BIN": "python",
             "ROOT_PATH": "",
         }
@@ -97,6 +98,42 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertIn("watches", body)
         self.assertIn("thread_alive", body["services"]["watch"])
         self.assertIn("recovery_count", body["stores"]["jobs"])
+
+    def test_instagram_page_renders_with_session_panel(self) -> None:
+        client = self.create_test_client()
+
+        response = client.get("/instagram")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Instagram session", response.text)
+        self.assertIn('href="/instagram"', response.text)
+
+    def test_instagram_download_rejects_non_instagram_url(self) -> None:
+        client = self.create_test_client()
+
+        empty_response = client.post("/instagram/downloads", json={"url": "   "})
+        self.assertEqual(empty_response.status_code, 422)
+
+        wrong_host_response = client.post(
+            "/instagram/downloads", json={"url": "https://www.tiktok.com/@x/video/1"}
+        )
+        self.assertEqual(wrong_host_response.status_code, 422)
+        self.assertIn("Instagram URL", str(wrong_host_response.json()["detail"]))
+
+    def test_instagram_unknown_download_returns_404(self) -> None:
+        client = self.create_test_client()
+
+        self.assertEqual(client.get("/instagram/downloads/nope").status_code, 404)
+        self.assertEqual(client.get("/instagram/downloads/nope/files/0").status_code, 404)
+
+    def test_health_details_exposes_instagram_session(self) -> None:
+        client = self.create_test_client()
+
+        body = client.get("/health/details").json()
+
+        self.assertIn("instagram", body)
+        self.assertIn("cookies_configured", body["instagram"])
+        self.assertIn("browser_login", body["instagram"])
 
 
 if __name__ == "__main__":

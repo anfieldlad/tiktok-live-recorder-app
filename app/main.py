@@ -11,6 +11,11 @@ from app.api.auth import router as auth_router
 from app.api.downloads import router as downloads_router
 from app.api.recordings import router as recordings_router
 from app.api.recordings import watch_router
+from app.instagram.router import auth_router as instagram_auth_router
+from app.instagram.router import downloads_router as instagram_downloads_router
+from app.instagram.services.instagram_browser_login_service import InstagramBrowserLoginService
+from app.instagram.services.instagram_cookie_service import InstagramCookieService
+from app.instagram.services.instagram_download_service import InstagramDownloadService
 from app.services.browser_login_service import BrowserLoginService
 from app.services.config import PROJECT_ROOT, get_settings
 from app.services.cookie_service import CookieService
@@ -41,6 +46,9 @@ def create_app() -> FastAPI:
     live_status_service = LiveStatusService(settings)
     recorder_service = RecorderService(settings, job_store, file_service)
     post_download_service = PostDownloadService(settings.output_dir, cookie_service)
+    instagram_cookie_service = InstagramCookieService(settings.instagram_cookies_file)
+    instagram_browser_login_service = InstagramBrowserLoginService(settings.jobs_file.parents[1], instagram_cookie_service)
+    instagram_download_service = InstagramDownloadService(settings.output_dir, instagram_cookie_service)
     watch_service = WatchService(
         watch_store,
         job_store,
@@ -67,6 +75,9 @@ def create_app() -> FastAPI:
     app.state.live_status_service = live_status_service
     app.state.recorder_service = recorder_service
     app.state.post_download_service = post_download_service
+    app.state.instagram_cookie_service = instagram_cookie_service
+    app.state.instagram_browser_login_service = instagram_browser_login_service
+    app.state.instagram_download_service = instagram_download_service
     app.state.watch_service = watch_service
     app.state.templates = templates
 
@@ -76,11 +87,19 @@ def create_app() -> FastAPI:
     app.include_router(downloads_router)
     app.include_router(recordings_router)
     app.include_router(watch_router)
+    app.include_router(instagram_downloads_router)
+    app.include_router(instagram_auth_router)
 
-    def render_dashboard(request: Request, template_name: str, page_name: str) -> HTMLResponse:
+    def render_dashboard(request: Request, template_name: str, page_name: str, platform: str = "tiktok") -> HTMLResponse:
         base_path = settings.root_path.rstrip("/")
         jobs = [job.model_dump(mode="json") for job in job_store.list_jobs()]
         watch_jobs = [job.model_dump(mode="json") for job in watch_store.list_jobs()]
+        if platform == "instagram":
+            cookies_configured = instagram_cookie_service.is_configured()
+            browser_login_status = instagram_browser_login_service.status()
+        else:
+            cookies_configured = cookie_service.is_configured()
+            browser_login_status = browser_login_service.status()
         return templates.TemplateResponse(
             request,
             template_name,
@@ -89,10 +108,11 @@ def create_app() -> FastAPI:
                 "jobs": jobs,
                 "watch_jobs": watch_jobs,
                 "page_name": page_name,
+                "platform": platform,
                 "settings": settings,
                 "base_path": base_path,
-                "cookies_configured": cookie_service.is_configured(),
-                "browser_login_status": browser_login_service.status(),
+                "cookies_configured": cookies_configured,
+                "browser_login_status": browser_login_status,
             },
         )
 
@@ -107,6 +127,10 @@ def create_app() -> FastAPI:
     @app.get("/download", response_class=HTMLResponse)
     def download_page(request: Request) -> HTMLResponse:
         return render_dashboard(request, "download.html", "download")
+
+    @app.get("/instagram", response_class=HTMLResponse)
+    def instagram_page(request: Request) -> HTMLResponse:
+        return render_dashboard(request, "instagram_download.html", "instagram", platform="instagram")
 
     @app.api_route("/favicon.svg", methods=["GET", "HEAD"])
     def favicon_svg() -> FileResponse:
@@ -131,6 +155,10 @@ def create_app() -> FastAPI:
             "root_path": settings.root_path,
             "cookies_configured": cookie_service.is_configured(),
             "browser_login": browser_login_service.status(),
+            "instagram": {
+                "cookies_configured": instagram_cookie_service.is_configured(),
+                "browser_login": instagram_browser_login_service.status(),
+            },
             "recordings": {
                 "total": len(jobs),
                 "active_job_id": active_recording.id if active_recording else None,
