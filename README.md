@@ -1,6 +1,6 @@
 # TikTok Media Saver
 
-This project is a local app for saving TikTok and Instagram media from a browser UI.
+This project is a self-hosted web app for saving TikTok and Instagram media from a browser UI.
 
 It ships as two **sister apps** in one repository and one process:
 
@@ -107,7 +107,7 @@ Optional but recommended:
 
 - `uv` for setting up the upstream recorder environment
 
-## Local Setup
+## Setup
 
 ### 1. Clone this project
 
@@ -165,7 +165,7 @@ Verify:
 ffmpeg -version
 ```
 
-### 6. Run locally
+### 6. Run
 
 On Windows:
 
@@ -190,7 +190,7 @@ Open:
 .venv/bin/python -m unittest discover -s tests
 ```
 
-## Local Configuration
+## Configuration
 
 Important values in `.env`:
 
@@ -207,7 +207,7 @@ By default, this project expects the upstream recorder at:
 vendor/tiktok-live-recorder
 ```
 
-## Local Usage
+## Usage
 
 ### Record a live
 
@@ -650,7 +650,7 @@ sudo certbot --nginx -d your-domain.com
 - This app allows only one active recording at a time.
 - Watch mode can monitor multiple accounts, but recording still starts only when the single recording slot is available.
 - The recorder is invoked through subprocess and follows the upstream CLI contract.
-- Finished files are stored locally.
+- Finished files are stored on the server and deleted after download.
 - Downloading a finished recording removes the file afterward.
 - Private or restricted lives may require a valid TikTok session.
 - The guided browser-login launcher currently works only on Windows. Linux deployments use manual session input.
