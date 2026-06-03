@@ -44,15 +44,21 @@ class InstagramDownloadService:
 
         cookie_file = self._write_cookie_file()
         try:
-            error = self._run_gallery_dl(normalized_url, download_dir, cookie_file)
-            files = self._collect_files(download_dir)
-            if not files:
-                # gallery-dl produced nothing (or failed); try yt-dlp as a fallback,
-                # which is strongest for single reels/videos.
-                fallback_error = self._run_yt_dlp(normalized_url, download_dir, cookie_file)
+            # Run the best engine for this URL first, then fall back to the other.
+            # Reels are single videos where yt-dlp is strongest; posts, carousels,
+            # stories, and highlights are gallery-dl's strength. Picking the right
+            # primary avoids burning minutes on a doomed first attempt.
+            files: list[Path] = []
+            errors: list[str] = []
+            for engine in self._engine_order(normalized_url):
+                error = engine(normalized_url, download_dir, cookie_file)
                 files = self._collect_files(download_dir)
-                if not files:
-                    raise RuntimeError(error or fallback_error or "download finished but no output files were created")
+                if files:
+                    break
+                if error:
+                    errors.append(error)
+            if not files:
+                raise RuntimeError(errors[0] if errors else "download finished but no output files were created")
         finally:
             if cookie_file:
                 cookie_file.unlink(missing_ok=True)
@@ -60,6 +66,15 @@ class InstagramDownloadService:
         download_result = InstagramDownloadResult(download_id=download_id, output_dir=download_dir, files=files)
         self._results[download_id] = download_result
         return download_result
+
+    def _engine_order(self, url: str):
+        if self._is_reel(url):
+            return [self._run_yt_dlp, self._run_gallery_dl]
+        return [self._run_gallery_dl, self._run_yt_dlp]
+
+    def _is_reel(self, url: str) -> bool:
+        path = urlparse(url).path.lower()
+        return "/reel/" in path or "/reels/" in path
 
     def get_result(self, download_id: str) -> InstagramDownloadResult | None:
         return self._results.get(download_id)
@@ -84,6 +99,8 @@ class InstagramDownloadService:
             sys.executable,
             "-m",
             "gallery_dl",
+            "--retries",
+            "2",
             "--dest",
             str(download_dir),
             "--write-metadata",
