@@ -6,16 +6,25 @@ For production server details (SSH, nginx, systemd, deploy steps, troubleshootin
 
 ## Project Overview
 
-This is a local FastAPI application for saving TikTok media. The app provides browser UI pages for recording TikTok Live streams, watching accounts until they go live, and downloading public TikTok video or picture posts.
+This is a local FastAPI application for saving TikTok and Instagram media. It ships
+as two **sister apps** in one repository and one process: a TikTok saver (record
+Live, auto-record, download public posts) and an Instagram saver (download posts,
+reels, carousels, stories, highlights) mounted under the `/instagram` path prefix.
+They share layout, CSS, backend infrastructure, and deployment, but each has its
+own branding, accent theme, and session/cookie flow. A top-bar switcher links
+between them. Which app renders is driven by a `platform` value (`tiktok` |
+`instagram`) passed into the templates.
 
 Primary code areas:
 
-- `app/main.py` wires the FastAPI app, services, routes, templates, static files, and health endpoints.
-- `app/api/` contains API routers.
-- `app/services/` contains app state, recorder integration, browser login, cookies, file handling, live status, and watch logic.
-- `app/services/post_download_service.py` contains post download integration through `yt-dlp` and the picture-post fallback.
+- `app/main.py` wires the FastAPI app, all services (TikTok + Instagram), routes, templates, static files, and health endpoints. `render_dashboard(..., platform=...)` selects per-app context.
+- `app/api/` contains the TikTok API routers (auth, downloads, recordings).
+- `app/services/` contains shared and TikTok services: app state, recorder integration, browser login, cookies, file handling, live status, and watch logic.
+- `app/services/post_download_service.py` contains TikTok post download integration through `yt-dlp` and the picture-post fallback.
+- `app/services/chromium_cookies.py` is the shared, domain-parameterized Chromium cookie reader used by both the TikTok and Instagram cookie services.
+- `app/instagram/` is the Instagram sister app: `api/` (`/instagram/downloads`, `/instagram/auth`), `services/` (`instagram_download_service.py` with the gallery-dl/yt-dlp engine routing, `instagram_cookie_service.py`, `instagram_browser_login_service.py`), and `router.py`.
 - `app/models/` contains shared data models.
-- `app/templates/` contains Jinja templates.
+- `app/templates/` contains Jinja templates (TikTok pages, `instagram_download.html`, and `_session_panel.html` / `_ig_session_panel.html`).
 - `app/static/css/` and `app/static/js/` contain frontend assets.
 - `tests/` contains Python unit/integration tests.
 
@@ -86,20 +95,34 @@ If adding behavior that changes routing, service state, store recovery, diagnost
 - Avoid importing the upstream recorder directly into request handlers; keep recorder integration inside services.
 - Keep frontend changes split between shared files and page-specific files:
   - shared helpers in `app/static/js/app-common.js`
-  - shared session logic in `app/static/js/session-panel.js`
+  - shared styles in `app/static/css/app.css` (Instagram theme via `body[data-app="instagram"]`)
+  - TikTok session logic in `app/static/js/session-panel.js`; Instagram in `app/static/js/ig-session-panel.js`
   - live page logic in `record-page.js` or `watch-page.js`
-  - post download logic in `download-page.js`
-  - shared styles in `app/static/css/app.css`
+  - TikTok post download logic in `download-page.js`; Instagram in `instagram-download-page.js`
+- Keep the sister-app boundary clean: Instagram code lives under `app/instagram/`; don't entangle it with the TikTok routers/services. Reuse shared helpers (e.g. `app/services/chromium_cookies.py`) rather than duplicating.
+- Per-app UI is selected by the `platform` template variable; route page handlers through `render_dashboard(..., platform=...)`.
 - Do not commit local recordings, cookies, logs, temporary job files, virtualenvs, or cloned vendor code.
 
 ## Safety Notes
 
-This app can launch recording subprocesses and handle local cookies/session data. Be careful when changing:
+This app launches recording/download subprocesses (`yt-dlp`, `gallery-dl`, the
+recorder) and handles local cookies/session data. Be careful when changing:
 
-- `CookieService`
-- `BrowserLoginService`
+- `CookieService`, `InstagramCookieService`, and the shared `chromium_cookies` helper
+- `BrowserLoginService` and `InstagramBrowserLoginService`
 - `RecorderService`
-- file deletion after downloads
+- the download services (`post_download_service.py`, `instagram_download_service.py`) — they shell out to `yt-dlp`/`gallery-dl` with user-supplied URLs and a temp cookie file
+- file deletion after downloads — Instagram and finished recordings are deleted once downloaded (`cleanup_file_after_download`, `cleanup_download_artifacts`)
 - job/watch store recovery and persistence
 
+TikTok and Instagram sessions are stored separately (`recorder_cookies.json`
+keyed on `session_ss`; `data/instagram_cookies.json` keyed on `sessionid`).
 Avoid exposing cookie/session values in logs, diagnostics, errors, or templates.
+
+## Deploy
+
+Production runs under `ROOT_PATH=/tiktok` behind nginx, so the Instagram saver is
+served at `/tiktok/instagram`. Deploy by pushing to `main` and pulling on the
+server (`git pull` + `pip install -r requirements.txt` + restart). New runtime
+dependencies (e.g. `gallery-dl`) must be installed before restart. Full server
+details are in [SSH.md](SSH.md).

@@ -1,11 +1,20 @@
 # TikTok Media Saver
 
-This project is a local app for saving TikTok media from a browser UI.
+This project is a local app for saving TikTok and Instagram media from a browser UI.
+
+It ships as two **sister apps** in one repository and one process:
+
+- a **TikTok saver** with `Record live`, `Auto-record`, and `Save post` pages
+- an **Instagram saver** with a `Save Instagram` page, mounted at `/instagram`
+
+The two share the same layout, styles, and backend infrastructure but have their
+own branding, accent theme, and session/cookie flow. A switcher button in the top
+bar (showing the other app's logo) hops between them.
 
 It includes:
-- a browser UI with separate `Record Now`, `Watch Mode`, `Download Post`, and `Instagram` pages
+- the two sister-app UIs described above
 - a FastAPI backend
-- local job tracking, watch tracking, post downloads, Instagram downloads, and file downloads
+- local job tracking, watch tracking, TikTok post downloads, Instagram downloads, and file downloads
 - lightweight diagnostics for health and runtime status
 
 Live recording is powered by [`Michele0303/tiktok-live-recorder`](https://github.com/Michele0303/tiktok-live-recorder).
@@ -39,30 +48,52 @@ This app is split into two layers:
 This repository is the application layer.
 The Michele0303 project is the recorder engine that handles TikTok live access and stream capture.
 
+### Sister apps
+
+The Instagram saver is a self-contained module under `app/instagram/` (its own
+router, services, templates, and session/cookie flow) mounted into the **same**
+FastAPI process under the `/instagram` path prefix. It reuses the shared config,
+base layout, CSS, file serving, and deployment — no second process. The TikTok
+feature is untouched. Which "app" renders is driven by a `platform` value
+(`tiktok` | `instagram`) passed into the templates, which selects the brand, nav,
+accent theme, session panel, and switcher target.
+
+Download engines:
+
+- **TikTok posts** — `yt-dlp` plus a picture-post fallback.
+- **Instagram** — `gallery-dl` first for posts/carousels/stories/highlights;
+  `yt-dlp` first for reels (single videos); each falls back to the other.
+
+Both Instagram and finished TikTok recordings are deleted from the server after
+they are downloaded.
+
 ## Project Structure
 
 ```text
 app/
-  api/
-  instagram/
+  api/                # TikTok routers (auth, downloads, recordings)
+  instagram/          # Instagram sister app
+    api/              # /instagram/downloads, /instagram/auth routers
+    services/         # download, cookie, browser-login services
   models/
-  services/
+  services/           # shared + TikTok services; chromium_cookies.py helper
   static/
   templates/
 data/
 logs/
-output/
+output/               # posts/ (TikTok) and instagram/ download artifacts
 vendor/
 ```
 
 Frontend files are split for reuse and easier maintenance:
 
-- shared layout in `app/templates/base.html`
-- shared session UI in `app/templates/_session_panel.html`
-- shared CSS in `app/static/css/app.css`
+- shared layout in `app/templates/base.html` (per-app brand, nav, theme, and switcher driven by `platform`)
+- shared CSS in `app/static/css/app.css` (Instagram accent theme via `body[data-app="instagram"]`)
 - shared browser helpers in `app/static/js/app-common.js`
-- shared session logic in `app/static/js/session-panel.js`
-- page-specific logic in `app/static/js/record-page.js`, `app/static/js/watch-page.js`, and `app/static/js/download-page.js`
+- TikTok session UI in `app/templates/_session_panel.html` + `app/static/js/session-panel.js`
+- Instagram session UI in `app/templates/_ig_session_panel.html` + `app/static/js/ig-session-panel.js`
+- TikTok page logic in `record-page.js`, `watch-page.js`, and `download-page.js`
+- Instagram page logic in `app/static/js/instagram-download-page.js` and template `app/templates/instagram_download.html`
 
 ## Prerequisites
 
@@ -203,14 +234,17 @@ vendor/tiktok-live-recorder
 
 ### Download Instagram media
 
-1. Open the `Instagram` page.
+1. Open the **Instagram saver** — click the `Instagram saver` switcher button in the
+   top bar (it carries the Instagram logo), or go to `/instagram` directly.
 2. Paste an Instagram post, reel, carousel, story, or highlight URL.
 3. Click `Download`.
 4. When the download finishes, use the generated file links to save the media from the browser.
 
+To return to the TikTok saver, use the `TikTok saver` switcher button in the top bar.
+
 Instagram aggressively rate-limits and login-walls content. Stories, highlights,
 and most posts require a saved Instagram session — use the Instagram session
-drawer (the session chip on the `Instagram` page) to sign in, the same way as the
+drawer (the session chip on the Instagram saver) to sign in, the same way as the
 TikTok session flow. The Instagram session is stored separately from the TikTok one.
 
 Instagram downloads are powered by `gallery-dl` (best for posts, carousels,
@@ -221,6 +255,11 @@ handles fastest.
 Like a finished TikTok recording, Instagram files are removed from the server
 after you download them: each file is deleted once saved, and the whole download
 folder is wiped when all of its media has been downloaded.
+
+> When deployed under a subpath (e.g. `ROOT_PATH=/tiktok`), the Instagram saver
+> lives at `/tiktok/instagram`, not `/instagram`. The in-app switcher links there
+> correctly. Long downloads (large carousels) can exceed nginx's default 60s
+> `proxy_read_timeout`; raise it on the `location` block if needed.
 
 ### Sign in for private or restricted lives
 
