@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import secrets
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -9,6 +11,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from app.instagram.services.instagram_cookie_service import InstagramCookieService
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -93,6 +98,32 @@ class InstagramDownloadService:
         if not resolved_file.is_file() or not resolved_file.is_relative_to(resolved_output_dir):
             raise FileNotFoundError("download file does not exist")
         return resolved_file
+
+    def cleanup_file_after_download(self, download_id: str, file_index: int) -> None:
+        """Delete a downloaded file after it is served, and wipe the whole
+        download once all media is gone (mirrors the TikTok recording flow).
+        Leftover metadata (.json) is swept along with the last media file."""
+        result = self._results.get(download_id)
+        if result is None:
+            return
+        try:
+            file_path = result.files[file_index]
+        except IndexError:
+            return
+
+        resolved_output_dir = result.output_dir.resolve()
+        try:
+            resolved_file = file_path.resolve()
+            if resolved_file.is_file() and resolved_file.is_relative_to(resolved_output_dir):
+                resolved_file.unlink(missing_ok=True)
+                logger.info("Deleted Instagram file after download", extra={"download_id": download_id, "file_index": file_index})
+        finally:
+            remaining = [path for path in result.output_dir.rglob("*") if path.is_file()]
+            media_remaining = [path for path in remaining if path.suffix.lower() != ".json"]
+            if not media_remaining:
+                shutil.rmtree(result.output_dir, ignore_errors=True)
+                self._results.pop(download_id, None)
+                logger.info("Wiped Instagram download after all media downloaded", extra={"download_id": download_id})
 
     def _run_gallery_dl(self, url: str, download_dir: Path, cookie_file: Path | None) -> str | None:
         command = [

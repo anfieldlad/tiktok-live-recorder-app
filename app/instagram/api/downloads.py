@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
+from starlette.background import BackgroundTask
 
 from app.instagram.services.instagram_download_service import InstagramDownloadResult
 from app.services.config import PROJECT_ROOT
@@ -69,6 +70,7 @@ def download_file(request: Request, download_id: str, file_index: int) -> FileRe
         path=file_path,
         filename=file_path.name,
         media_type="application/octet-stream",
+        background=BackgroundTask(instagram_download_service.cleanup_file_after_download, download_id, file_index),
     )
 
 

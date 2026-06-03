@@ -214,7 +214,13 @@ drawer (the session chip on the `Instagram` page) to sign in, the same way as th
 TikTok session flow. The Instagram session is stored separately from the TikTok one.
 
 Instagram downloads are powered by `gallery-dl` (best for posts, carousels,
-stories, and highlights), with `yt-dlp` as an automatic fallback for single reels.
+stories, and highlights), with `yt-dlp` as an automatic fallback. For reel URLs
+the order is reversed (yt-dlp first), since reels are single videos yt-dlp
+handles fastest.
+
+Like a finished TikTok recording, Instagram files are removed from the server
+after you download them: each file is deleted once saved, and the whole download
+folder is wiped when all of its media has been downloaded.
 
 ### Sign in for private or restricted lives
 
