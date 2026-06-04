@@ -614,6 +614,19 @@ input:focus, textarea:focus {
    File list (downloads)
    ========================================================================== */
 
+/* Download progress card */
+.elapsed-counter {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 3px 8px;
+  background: var(--surface-sunken);
+  color: var(--muted);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
 .file-list { display: grid; gap: 8px; }
 .file-row {
   display: grid;

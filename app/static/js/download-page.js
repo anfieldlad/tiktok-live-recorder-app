@@ -6,6 +6,9 @@ function initDownloadPage() {
   const notice = document.getElementById("post-download-notice");
   const resultContainer = document.getElementById("post-download-result");
 
+  let elapsedInterval = null;
+  let elapsedSeconds = 0;
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -27,6 +30,32 @@ function initDownloadPage() {
         <span class="empty-title">No post downloaded yet</span>
         <span>Paste a TikTok post URL on the left to get started.</span>
       </div>`;
+  }
+
+  function renderLoading() {
+    elapsedSeconds = 0;
+    resultContainer.innerHTML = `
+      <article class="job-card">
+        <header class="job-header">
+          <div>
+            <h3 class="job-title">Downloading…</h3>
+            <span class="elapsed-counter" id="download-elapsed">0s</span>
+          </div>
+          <span class="status-pill live">Working</span>
+        </header>
+        <p class="job-message">Fetching media from TikTok. This usually takes a few seconds.</p>
+      </article>`;
+    elapsedInterval = setInterval(() => {
+      elapsedSeconds++;
+      const el = document.getElementById("download-elapsed");
+      if (el) el.textContent = elapsedSeconds + "s";
+      if (elapsedSeconds === 10) setNotice(notice, "Still working — fetching the media from TikTok…");
+      if (elapsedSeconds === 30) setNotice(notice, "Taking a bit longer than usual — still going, hang tight…");
+    }, 1000);
+  }
+
+  function clearLoading() {
+    if (elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
   }
 
   function renderResult(download) {
@@ -84,7 +113,8 @@ function initDownloadPage() {
 
     downloadButton.disabled = true;
     clearButton.disabled = true;
-    setNotice(notice, "Downloading the TikTok post. This may take a moment...");
+    setNotice(notice, "Starting download…");
+    renderLoading();
 
     try {
       const response = await fetch(appPath("/downloads"), {
@@ -92,12 +122,15 @@ function initDownloadPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url })
       });
+      clearLoading();
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't download the TikTok post."));
       const body = await response.json();
       renderResult(body);
       setNotice(notice, "Post downloaded. Use the file links to save the results.", "success");
       form.reset();
     } catch (error) {
+      clearLoading();
+      resultContainer.innerHTML = emptyState();
       setNotice(notice, error.message, "error");
     } finally {
       downloadButton.disabled = false;
@@ -106,6 +139,7 @@ function initDownloadPage() {
   }
 
   function clearForm() {
+    clearLoading();
     form.reset();
     resultContainer.innerHTML = emptyState();
     setNotice(notice, "Enter a public TikTok post URL, then click Download.");

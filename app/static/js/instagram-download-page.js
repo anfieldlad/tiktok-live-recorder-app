@@ -6,6 +6,9 @@ function initInstagramDownloadPage() {
   const notice = document.getElementById("instagram-download-notice");
   const resultContainer = document.getElementById("instagram-download-result");
 
+  let elapsedInterval = null;
+  let elapsedSeconds = 0;
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -27,6 +30,32 @@ function initInstagramDownloadPage() {
         <span class="empty-title">Nothing downloaded yet</span>
         <span>Paste an Instagram URL on the left to get started.</span>
       </div>`;
+  }
+
+  function renderLoading() {
+    elapsedSeconds = 0;
+    resultContainer.innerHTML = `
+      <article class="job-card">
+        <header class="job-header">
+          <div>
+            <h3 class="job-title">Downloading…</h3>
+            <span class="elapsed-counter" id="download-elapsed">0s</span>
+          </div>
+          <span class="status-pill live">Working</span>
+        </header>
+        <p class="job-message">Fetching media from Instagram. Reels usually finish in under 15 seconds. Posts, carousels, stories, and highlights may take longer.</p>
+      </article>`;
+    elapsedInterval = setInterval(() => {
+      elapsedSeconds++;
+      const el = document.getElementById("download-elapsed");
+      if (el) el.textContent = elapsedSeconds + "s";
+      if (elapsedSeconds === 15) setNotice(notice, "Still working — fetching the media from Instagram…");
+      if (elapsedSeconds === 40) setNotice(notice, "Taking a bit longer than usual — still going, hang tight…");
+    }, 1000);
+  }
+
+  function clearLoading() {
+    if (elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
   }
 
   function renderResult(download) {
@@ -84,7 +113,8 @@ function initInstagramDownloadPage() {
 
     downloadButton.disabled = true;
     clearButton.disabled = true;
-    setNotice(notice, "Downloading the Instagram media. This may take a moment...");
+    setNotice(notice, "Starting download…");
+    renderLoading();
 
     try {
       const response = await fetch(appPath("/instagram/downloads"), {
@@ -92,12 +122,15 @@ function initInstagramDownloadPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url })
       });
+      clearLoading();
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't download the Instagram media."));
       const body = await response.json();
       renderResult(body);
       setNotice(notice, "Download complete. Use the file links to save the results.", "success");
       form.reset();
     } catch (error) {
+      clearLoading();
+      resultContainer.innerHTML = emptyState();
       setNotice(notice, error.message, "error");
     } finally {
       downloadButton.disabled = false;
@@ -106,6 +139,7 @@ function initInstagramDownloadPage() {
   }
 
   function clearForm() {
+    clearLoading();
     form.reset();
     resultContainer.innerHTML = emptyState();
     setNotice(notice, "Enter an Instagram URL, then click Download.");
