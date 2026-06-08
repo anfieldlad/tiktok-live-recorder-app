@@ -95,6 +95,12 @@ def _ffmpeg_stream(ffmpeg_bin: str, live_url: str) -> Iterator[bytes]:
         ffmpeg_bin,
         "-hide_banner",
         "-loglevel", "error",
+        # A live FLV is joined mid-stream, so the initial codec header (SPS/PPS) was
+        # already sent. Probe longer to catch an in-band keyframe before writing the
+        # MP4 header, regenerate timestamps, and drop the corrupt leading packets.
+        "-analyzeduration", "10M",
+        "-probesize", "10M",
+        "-fflags", "+genpts+discardcorrupt",
         "-i", live_url,
         "-c", "copy",
         "-movflags", "frag_keyframe+empty_moov+default_base_moof",
