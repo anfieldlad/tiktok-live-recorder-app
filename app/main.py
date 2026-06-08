@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.auth import router as auth_router
 from app.api.downloads import router as downloads_router
+from app.api.live_relay import router as live_relay_router
 from app.api.recordings import router as recordings_router
 from app.api.recordings import watch_router
 from app.instagram.router import auth_router as instagram_auth_router
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(downloads_router)
+    app.include_router(live_relay_router)
     app.include_router(recordings_router)
     app.include_router(watch_router)
     app.include_router(instagram_downloads_router)
