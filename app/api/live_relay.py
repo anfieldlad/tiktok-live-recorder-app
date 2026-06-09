@@ -95,6 +95,13 @@ def _ffmpeg_stream(ffmpeg_bin: str, live_url: str) -> Iterator[bytes]:
         ffmpeg_bin,
         "-hide_banner",
         "-loglevel", "error",
+        # TikTok's CDN rotates edges and closes the FLV connection every few seconds;
+        # without reconnect, ffmpeg treats that EOF as the end and the recording stops
+        # after ~20s. Reconnect to the same URL on drop/EOF (mirrors the recorder's loop).
+        "-reconnect", "1",
+        "-reconnect_at_eof", "1",
+        "-reconnect_streamed", "1",
+        "-reconnect_delay_max", "5",
         # A live FLV is joined mid-stream, so the initial codec header (SPS/PPS) was
         # already sent. Probe longer to catch an in-band keyframe before writing the
         # MP4 header, regenerate timestamps, and drop the corrupt leading packets.
