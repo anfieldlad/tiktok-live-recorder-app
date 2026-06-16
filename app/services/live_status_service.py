@@ -106,7 +106,7 @@ print(json.dumps(result))
         mapping = {
             "Account is private, login required.": "This account is private. Sign in to TikTok to access this live.",
             "This account is private. Follow the creator to access their LIVE.": "This account is private. Your TikTok account must follow this creator to view the live.",
-            "Live is private, login required.": "This live is private or restricted. Sign in to TikTok to continue.",
+            "Live is private, login required.": "TikTok has restricted this live (often age-restricted/18+). Recording needs a signed-in, age-verified TikTok session, and some restricted lives can't be accessed at all.",
             "Username / RoomID not found or the user has never been in live.": "User ID not found.",
             "The user has never hosted a live stream on TikTok.": "This account has never gone live on TikTok.",
             "The user is not hosting a live stream at the moment.": "This user is not live right now.",
