@@ -5,6 +5,8 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -134,7 +136,6 @@ class InstagramDownloadService:
             "2",
             "--dest",
             str(download_dir),
-            "--write-metadata",
             url,
         ]
         if cookie_file:
@@ -163,7 +164,6 @@ class InstagramDownloadService:
             "chrome",
             "--add-header",
             "Referer: https://www.instagram.com/",
-            "--write-info-json",
             "--paths",
             str(download_dir),
             "--output",
@@ -186,7 +186,44 @@ class InstagramDownloadService:
         return None
 
     def _collect_files(self, download_dir: Path) -> list[Path]:
-        return sorted(path for path in download_dir.rglob("*") if path.is_file())
+        # Only media is useful to the user — drop any metadata sidecars the
+        # engines might still emit (gallery-dl/yt-dlp .json).
+        return sorted(
+            path
+            for path in download_dir.rglob("*")
+            if path.is_file() and path.suffix.lower() != ".json"
+        )
+
+    def create_archive(self, download_id: str) -> Path:
+        """Zip every media file from a download into a single temp archive so
+        the user can grab a whole post/carousel in one click."""
+        result = self.get_result(download_id)
+        if result is None:
+            raise KeyError("download not found")
+
+        resolved_output_dir = result.output_dir.resolve()
+        media_files = [
+            path
+            for path in result.files
+            if path.resolve().is_file() and path.resolve().is_relative_to(resolved_output_dir)
+        ]
+        if not media_files:
+            raise FileNotFoundError("no files to archive")
+
+        archive_path = Path(tempfile.gettempdir()) / f"instagram-{download_id}-{secrets.token_hex(4)}.zip"
+        with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_STORED) as archive:
+            for path in media_files:
+                archive.write(path, arcname=path.name)
+        return archive_path
+
+    def cleanup_after_archive(self, download_id: str, archive_path: Path) -> None:
+        """Delete the temp zip and wipe the whole download once it has been
+        served, matching the per-file cleanup behaviour."""
+        archive_path.unlink(missing_ok=True)
+        result = self._results.pop(download_id, None)
+        if result is not None:
+            shutil.rmtree(result.output_dir, ignore_errors=True)
+            logger.info("Wiped Instagram download after archive download", extra={"download_id": download_id})
 
     def _new_download_id(self) -> str:
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")

@@ -86,6 +86,10 @@ function initInstagramDownloadPage() {
         </div>`;
     }).join("");
 
+    const downloadAll = download.files.length > 1 && download.zip_url
+      ? `<a class="btn btn-primary" href="${appPath(download.zip_url)}">Download all (${download.files.length})</a>`
+      : "";
+
     resultContainer.innerHTML = `
       <article class="job-card">
         <header class="job-header">
@@ -98,6 +102,7 @@ function initInstagramDownloadPage() {
         <dl class="job-stats">
           <div class="wide"><dt>Output folder</dt><dd>${escapeHtml(download.output_dir)}</dd></div>
         </dl>
+        ${downloadAll ? `<div class="row">${downloadAll}</div>` : ""}
         <div class="file-list">${fileRows}</div>
       </article>
     `;

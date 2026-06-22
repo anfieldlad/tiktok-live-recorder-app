@@ -32,6 +32,7 @@ class InstagramDownloadResponse(BaseModel):
     output_dir: str
     files: list[str]
     file_urls: list[str]
+    zip_url: str
 
 
 @router.post("", response_model=InstagramDownloadResponse, status_code=status.HTTP_201_CREATED)
@@ -74,6 +75,24 @@ def download_file(request: Request, download_id: str, file_index: int) -> FileRe
     )
 
 
+@router.get("/{download_id}/zip")
+def download_all(request: Request, download_id: str) -> FileResponse:
+    instagram_download_service = request.app.state.instagram_download_service
+    try:
+        archive_path = instagram_download_service.create_archive(download_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    return FileResponse(
+        path=archive_path,
+        filename=f"instagram-{download_id}.zip",
+        media_type="application/zip",
+        background=BackgroundTask(instagram_download_service.cleanup_after_archive, download_id, archive_path),
+    )
+
+
 def _to_response(result: InstagramDownloadResult) -> InstagramDownloadResponse:
     return InstagramDownloadResponse(
         status="finished",
@@ -81,6 +100,7 @@ def _to_response(result: InstagramDownloadResult) -> InstagramDownloadResponse:
         output_dir=_display_path(result.output_dir),
         files=[_display_path(file_path) for file_path in result.files],
         file_urls=[f"/instagram/downloads/{result.download_id}/files/{index}" for index, _ in enumerate(result.files)],
+        zip_url=f"/instagram/downloads/{result.download_id}/zip",
     )
 
 
