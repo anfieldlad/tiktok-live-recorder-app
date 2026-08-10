@@ -20,6 +20,12 @@ playwright-report/
 logs/
 output/
 tools/
+# Loose log files at the repo root (e.g. uvicorn.log on the VPS). Not secrets, but
+# logs can carry URLs, tokens in query strings, and IPs.
+*.log
+
+# macOS folder metadata
+.DS_Store
 
 # Local app state
 data/browser-login/
