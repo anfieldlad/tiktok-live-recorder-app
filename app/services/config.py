@@ -22,7 +22,11 @@ class Settings(BaseSettings):
     logs_dir: Path = PROJECT_ROOT / "logs"
     recorder_dir: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder"
     recorder_entrypoint: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src" / "main.py"
-    recorder_cookies_file: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src" / ".." / "cookies.json"
+    # The recorder reads dirname(src/utils/utils.py)/../cookies.json, i.e.
+    # src/cookies.json. Writing to the vendor root instead (which is what
+    # "src/.." resolves to) left the recorder on a stale file with no sessionid,
+    # so every age-gated live came back as "Live is private, login required".
+    recorder_cookies_file: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src" / "cookies.json"
     instagram_cookies_file: Path = PROJECT_ROOT / "data" / "instagram_cookies.json"
     python_bin: str = "python"
     recorder_mode: str = Field(default="manual")

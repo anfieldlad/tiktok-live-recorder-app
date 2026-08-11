@@ -320,6 +320,20 @@ class TikTokCookieNamingTests(unittest.TestCase):
         self.assertEqual(client.post("/auth/tiktok-cookies", json={}).status_code, 422)
 
 
+class RecorderCookiePathTests(unittest.TestCase):
+    def test_default_cookie_path_is_the_one_the_recorder_reads(self) -> None:
+        """The vendor opens src/utils/../cookies.json — i.e. src/cookies.json.
+        Writing anywhere else silently leaves it unauthenticated."""
+        from app.services.config import PROJECT_ROOT, Settings
+
+        for key in ("RECORDER_COOKIES_FILE",):
+            os.environ.pop(key, None)
+        settings = Settings()
+
+        vendor_src = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src"
+        self.assertEqual(settings.recorder_cookies_file.resolve(), (vendor_src / "cookies.json").resolve())
+
+
 class InstagramCleanupTests(unittest.TestCase):
     def _service_with_download(self, temp_root: Path):
         service = InstagramDownloadService(temp_root)
