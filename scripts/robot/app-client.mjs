@@ -112,6 +112,11 @@ export class AppClient {
     return this.request("POST", "/auth/tiktok-cookies", { body: { session_ss: sessionSs }, retries: 2 });
   }
 
+  /** Upload the browser's whole TikTok cookie jar — needed for restricted lives. */
+  saveTikTokCookieMap(cookies) {
+    return this.request("POST", "/auth/tiktok-cookies", { body: { cookies }, retries: 2 });
+  }
+
   checkLive(source) {
     return this.request("POST", "/recordings/check-live", { body: source, timeoutMs: 120000 });
   }

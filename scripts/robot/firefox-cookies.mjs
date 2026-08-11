@@ -87,9 +87,27 @@ export function readSocialCookies(profileDir = DEFAULT_PROFILE) {
     const pick = (hostFragment, name) =>
       rows.find((row) => String(row.host).includes(hostFragment) && row.name === name)?.value ?? null;
 
+    // The recorder writes these keys out as cookie names, so send the real
+    // ones. msToken rotates and the recorder fetches its own; the rest is UI
+    // noise that would only bloat the file.
+    const NOISE = new Set([
+      "msToken", "perf_feed_cache", "tiktok_webapp_theme", "tiktok_webapp_theme_source",
+      "delay_guest_mode_vid", "guest_mode_flag", "_ttp", "waforigin_id",
+      "waforiginalreid", "_waftokenid",
+    ]);
+    const tiktokCookieMap = {};
+    for (const row of rows) {
+      const host = String(row.host);
+      const name = String(row.name);
+      if (!host.includes("tiktok.com") || NOISE.has(name) || !row.value) continue;
+      tiktokCookieMap[name] = String(row.value);
+    }
+
     const bundle = {
       playwrightCookies,
-      sessionSs: pick("tiktok.com", "session_ss") ?? pick("tiktok.com", "sessionid_ss"),
+      tiktokCookieMap,
+      // There is no session_ss cookie on TikTok; sessionid is the real one.
+      sessionSs: pick("tiktok.com", "sessionid") ?? pick("tiktok.com", "sessionid_ss"),
       instagramSessionId: pick("instagram.com", "sessionid"),
       counts: {
         tiktok: rows.filter((row) => String(row.host).includes("tiktok.com")).length,

@@ -25,9 +25,13 @@ import { discoverInstagramPost } from "./discover-instagram.mjs";
 import {
   discoverLiveUsernames,
   firstRecordable,
+  followedAccounts,
+  followingFeedAccounts,
   knownAccounts,
+  listedFollows,
+  recallFollowsCache,
   recallSeenLive,
-  rememberSeenLive,
+  rememberFollows,
 } from "./discover-live.mjs";
 import { readSocialCookies } from "./firefox-cookies.mjs";
 
@@ -44,6 +48,18 @@ class Skip extends Error {}
 const skip = (reason) => {
   throw new Skip(reason);
 };
+
+const STEP_DIR = join(OUT_DIR, "steps");
+let shotIndex = 0;
+
+/** Save a numbered screenshot so every step is inspectable after the fact. */
+async function shot(page, label) {
+  if (!page) return;
+  shotIndex += 1;
+  const file = join(STEP_DIR, `${String(shotIndex).padStart(2, "0")}-${label}.png`);
+  await page.screenshot({ path: file }).catch(() => {});
+  log(`    📷 ${file}`);
+}
 
 const results = [];
 const log = (message) => process.stdout.write(`${message}\n`);
@@ -96,6 +112,7 @@ async function waitForTerminalJob(client, jobId, timeoutMs) {
 
 async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
+  mkdirSync(STEP_DIR, { recursive: true });
   const client = new AppClient();
   const ctx = { client, browser: null, context: null, page: null, username: null, jobId: null };
 
@@ -117,14 +134,15 @@ async function main() {
     ctx.cookies = bundle.playwrightCookies;
     if (!bundle.sessionSs) throw new Error("no TikTok session_ss in the Firefox profile — log in there first");
 
-    const before = await client.healthDetails();
-    if (before.cookies_configured) {
-      return `server already has a TikTok session (${bundle.counts.tiktok} cookies available)`;
-    }
-    await client.saveTikTokSession(bundle.sessionSs);
+    // Always push the full jar. A single session value is not enough for
+    // restricted/age-gated rooms, and the browser's cookies rotate.
+    const jar = bundle.tiktokCookieMap ?? {};
+    const names = Object.keys(jar);
+    if (!names.length) throw new Error("no TikTok cookies to upload");
+    await client.saveTikTokCookieMap(jar);
     const after = await client.healthDetails();
     if (!after.cookies_configured) throw new Error("server still reports cookies_configured=false after upload");
-    return "uploaded the TikTok session from Firefox; server now signed in";
+    return `uploaded ${names.length} TikTok cookies from Firefox (incl. ${names.includes("sessionid") ? "sessionid" : "no sessionid!"})`;
   }, ctx);
 
   await step("Discover a live account", async () => {
@@ -137,22 +155,44 @@ async function main() {
     ctx.context = launched.context;
     ctx.close = launched.close;
 
-    const candidates = forcedUser ? [forcedUser] : [
-      ...(await discoverLiveUsernames(ctx.context, { log })),
-      // TikTok throttles the LIVE feeds under automation; accounts the app
-      // already tracks, plus creators seen live on earlier runs, keep
-      // discovery working when that happens.
-      ...(await knownAccounts(client, { log })),
-      ...recallSeenLive(),
-    ];
+    // Accounts the user actually follows come first — recording a stranger who
+    // happens to be on a search page is not the point. The full following list
+    // cannot be scraped (the Following modal serves a CAPTCHA), so it comes
+    // from .robot-follows plus whatever the home sidebar previews.
+    // Accounts the user follows come first — recording a stranger off a search
+    // page is not the point. The Following *list* cannot be scraped (CAPTCHA or
+    // a server error every time), so follows come from the Following *feed*,
+    // which is challenge-free, merged into a cache that grows every run.
+    let candidates;
+    if (forcedUser) {
+      candidates = [forcedUser];
+    } else {
+      const fresh = await followingFeedAccounts(ctx.context, { log, shot });
+      const follows = rememberFollows(fresh);
+      log(`  ${follows.length} followed account(s) known in total (cache + this run)`);
+      candidates = [
+        ...listedFollows({ log }),
+        ...recallSeenLive().filter((name) => follows.includes(name)),
+        ...follows,
+        ...(await followedAccounts(ctx.context, { log, shot, headed })),
+        ...(await knownAccounts(client, { log })),
+      ];
+    }
     const unique = [...new Set(candidates)];
-    if (!unique.length) skip("no candidates from TikTok's feeds or the app's own history");
+    if (!unique.length) skip("no candidates from your follows, the caches, or the app's history");
 
-    const hit = await firstRecordable(client, unique, { log });
+    let hit = await firstRecordable(client, unique, { log, maxChecks: 20 });
+    if (!hit && !forcedUser) {
+      // None of the follows are live. Rather than skipping the whole run, fall
+      // back to live search so the record/download/relay path still gets tested.
+      log("  no followed account is live; falling back to live search");
+      const searched = await discoverLiveUsernames(ctx.context, { log, shot, headed });
+      hit = await firstRecordable(client, searched.filter((n) => !unique.includes(n)), { log });
+      if (hit) hit.viaSearch = true;
+    }
     if (!hit) skip(`none of ${unique.length} candidate(s) were live right now`);
     ctx.username = hit.username;
-    rememberSeenLive([hit.username]);
-    return `@${hit.username} is live and recordable`;
+    return `@${hit.username} is live and recordable${hit.viaSearch ? " (via search, not a follow)" : " (one of your follows)"}`;
   }, ctx);
 
   await step("Record through the UI", async () => {
@@ -162,9 +202,13 @@ async function main() {
     const page = await ctx.context.newPage();
     ctx.page = page;
     await page.goto(`${DEFAULT_BASE_URL}/`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await shot(page, "app-record-page");
     await page.fill("#record-source", ctx.username);
     await page.fill("#record-duration", String(RECORD_SECONDS));
+    await shot(page, "app-form-filled");
     await page.getByRole("button", { name: "Start recording" }).click();
+    await sleep(2500);
+    await shot(page, "app-recording-started");
 
     // The page posts to the API; find the job it created.
     let job = null;
@@ -185,6 +229,9 @@ async function main() {
       throw new Error(`job ended as ${final.status}: ${final.error ?? final.progress_message}`);
     }
     if (!final.file_path) throw new Error("job finished but has no file_path");
+    await page.reload({ waitUntil: "domcontentloaded" }).catch(() => {});
+    await sleep(2000);
+    await shot(page, "app-recording-finished");
     return `recorded ${final.file_name} (${final.file_size_bytes ?? "?"} bytes)`;
   }, ctx);
 

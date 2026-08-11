@@ -35,3 +35,43 @@ export async function launchFirefox({ cookies = [], bypassHosts = [], headless =
     },
   };
 }
+
+const CHALLENGE_PATTERN = /Drag the slider|fit the puzzle|Verify to continue|unusual traffic/i;
+
+/**
+ * TikTok sometimes serves a slider CAPTCHA. The robot never solves it — that is
+ * a line it does not cross, and defeating it would only escalate an arms race
+ * against the account the production server depends on. In a headed run the
+ * person at the keyboard can clear it, so pause and let them; headless just
+ * reports and moves on.
+ */
+export async function waitOutChallenge(page, { headed = false, log = () => {}, timeoutMs = 180000 } = {}) {
+  const present = async () => {
+    try {
+      return CHALLENGE_PATTERN.test(await page.locator("body").innerText());
+    } catch {
+      return false;
+    }
+  };
+
+  if (!(await present())) return false;
+
+  if (!headed) {
+    log("  ⚠ TikTok is showing a CAPTCHA. Re-run with --headed to solve it yourself.");
+    return true;
+  }
+
+  log("");
+  log("  ⚠ TikTok is showing its slider CAPTCHA in the browser window.");
+  log("    Solve it there and the run will continue on its own. I will not solve it.");
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(2000);
+    if (!(await present())) {
+      log("  ✓ challenge cleared, carrying on");
+      return false;
+    }
+  }
+  log("  ⚠ challenge still up after waiting; continuing without it");
+  return true;
+}

@@ -52,3 +52,6 @@ data/
 
 # Upstream recorder clone
 vendor/tiktok-live-recorder/
+
+# Hand-maintained list of TikTok accounts for the robot to check (personal)
+.robot-follows
