@@ -116,8 +116,8 @@ def stream_live(request: Request, username: str | None = None, url: str | None =
         )
 
     try:
-        # The stream URL is resolved with a browser-shaped client: TikTok
-        # answers the vendor's python-requests with 4003110 on restricted rooms.
+        # Shares the resolver with check-live, so the relay and the status the
+        # user was just shown cannot disagree.
         live_status_service = request.app.state.live_status_service
         info = live_status_service.resolve_stream_url(
             RecordingCreateRequest(username=username, url=url)

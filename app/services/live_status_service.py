@@ -10,10 +10,9 @@ from app.services.live_stream import resolve_live_stream
 from app.services.redaction import redact_sensitive
 
 
-# The vendor recorder is still the best way to turn a username or URL into a
-# room id — that request is not fingerprinted. Everything after it (is the room
-# live, what is the stream URL) is done in-process with curl_cffi, because the
-# vendor's python-requests client gets 4003110 on restricted rooms.
+# The vendor recorder turns a username or URL into a room id: that needs its
+# signed-URL logic. Everything after it (is the room live, what is the stream
+# URL) is done in-process — see app/services/live_stream.py.
 _ROOM_LOOKUP_SCRIPT = """
 import json
 import os

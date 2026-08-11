@@ -1,14 +1,17 @@
-"""Resolve a live room's stream URL without the vendor's HTTP client.
+"""Resolve a live room's stream URL in-process.
 
-TikTok's webcast API fingerprints TLS. The vendor recorder talks to it with
-python-`requests`, and for restricted or age-gated rooms that gets answered with
-`status_code: 4003110` and an empty stream — which the vendor reads as "live
-restriction" and the app renders as "TikTok has restricted this live". The room
-is not restricted at all: the same request, same cookies, same IP, made with
-`curl_cffi` impersonating Chrome returns `status_code: 0` and a working FLV URL.
+Room lookup stays with the vendor recorder — turning a username or URL into a
+room id needs its signed-URL logic. The room -> stream step does not, so it
+happens here: one HTTP call, no subprocess hop, and no dependency on vendor
+internals for the part the relay and the status check both need.
 
-So room lookup stays with the vendor (that part works), and this module does the
-room -> stream step itself.
+Historical note, since the comments here used to claim otherwise: an earlier
+investigation blamed `status_code: 4003110` on TLS fingerprinting of the
+vendor's HTTP client. That was wrong. The vendor already uses `curl_cffi`, and
+its exact session config returns `status_code: 0` for the same room. The real
+cause was that the app wrote sessions to a different file than the recorder
+read (see the note on `recorder_cookies_file` in config.py), so the recorder
+was unauthenticated and TikTok correctly refused age-gated rooms.
 """
 
 from __future__ import annotations
@@ -88,8 +91,8 @@ def resolve_live_stream(room_id: str, cookies: dict[str, str] | None, timeout: i
     """Return {is_live, live_url, message} for a room id.
 
     `message` is empty when the stream is usable, and explains the problem
-    otherwise. A `4003110` here — with a browser-shaped request — is a genuine
-    restriction rather than the false one the vendor's client produces.
+    otherwise. `4003110` means TikTok will not hand this room to this session —
+    genuinely age-gated, or signed in as an account that may not watch it.
     """
     payload = fetch_room_info(room_id, cookies, timeout=timeout)
     status_code = payload.get("status_code")
