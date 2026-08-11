@@ -18,6 +18,7 @@ from app.instagram.services.instagram_browser_login_service import InstagramBrow
 from app.instagram.services.instagram_cookie_service import InstagramCookieService
 from app.instagram.services.instagram_download_service import InstagramDownloadService
 from app.services.browser_login_service import BrowserLoginService
+from app.services.cleanup_service import CleanupService
 from app.services.config import PROJECT_ROOT, get_settings
 from app.services.cookie_service import CookieService
 from app.services.file_service import FileService
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     instagram_cookie_service = InstagramCookieService(settings.instagram_cookies_file)
     instagram_browser_login_service = InstagramBrowserLoginService(settings.jobs_file.parents[1], instagram_cookie_service)
     instagram_download_service = InstagramDownloadService(settings.output_dir, instagram_cookie_service)
+    cleanup_service = CleanupService(settings, job_store)
     watch_service = WatchService(
         watch_store,
         job_store,
@@ -85,6 +87,7 @@ def create_app() -> FastAPI:
     app.state.instagram_browser_login_service = instagram_browser_login_service
     app.state.instagram_download_service = instagram_download_service
     app.state.watch_service = watch_service
+    app.state.cleanup_service = cleanup_service
     app.state.templates = templates
 
     app.mount("/static", StaticFiles(directory=str(app_root / "static")), name="static")
@@ -194,6 +197,7 @@ def create_app() -> FastAPI:
             "services": {
                 "recorder": recorder_service.diagnostics(),
                 "watch": watch_service.diagnostics(),
+                "cleanup": cleanup_service.diagnostics(),
             },
             "stores": {
                 "jobs": job_store.diagnostics(),

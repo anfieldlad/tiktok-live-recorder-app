@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     ffmpeg_bin: str = "ffmpeg"
     skip_update_check: bool = True
     cleanup_max_age_hours: int = 3
+    cleanup_interval_minutes: int = 30
+    log_max_age_hours: int = 72
     watch_poll_interval_seconds: int = 45
     process_stop_grace_seconds: int = 12
     live_resolve_timeout_seconds: int = 90

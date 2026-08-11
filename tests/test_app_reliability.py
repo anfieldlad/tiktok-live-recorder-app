@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -332,6 +333,85 @@ class RecorderCookiePathTests(unittest.TestCase):
 
         vendor_src = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src"
         self.assertEqual(settings.recorder_cookies_file.resolve(), (vendor_src / "cookies.json").resolve())
+
+
+class CleanupSweepTests(unittest.TestCase):
+    """output/posts and output/instagram used to grow forever: nothing called
+    cleanup_old_files, and download ids only live in memory, so anything left
+    on disk after a restart was unreachable and never removed."""
+
+    def _settings(self, root: Path):
+        from app.services.config import Settings
+
+        for key, value in {
+            "OUTPUT_DIR": str(root / "output"),
+            "LOGS_DIR": str(root / "logs"),
+            "JOBS_FILE": str(root / "data" / "jobs.json"),
+            "WATCH_JOBS_FILE": str(root / "data" / "watch_jobs.json"),
+            "CLEANUP_MAX_AGE_HOURS": "3",
+            "LOG_MAX_AGE_HOURS": "72",
+        }.items():
+            os.environ[key] = value
+            self.addCleanup(os.environ.pop, key, None)
+        settings = Settings()
+        settings.ensure_directories()
+        return settings
+
+    @staticmethod
+    def _age(path: Path, hours: float) -> None:
+        old = time.time() - hours * 3600
+        os.utime(path, (old, old))
+
+    def test_old_download_folders_go_and_fresh_ones_stay(self) -> None:
+        from app.services.cleanup_service import CleanupService
+        from app.services.job_store import JobStore
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            settings = self._settings(root)
+
+            stale = settings.output_dir / "posts" / "20260609-095748-ea52da"
+            stale.mkdir(parents=True)
+            (stale / "video.mp4").write_bytes(b"x" * 10)
+            self._age(stale / "video.mp4", 48)
+            self._age(stale, 48)
+
+            fresh = settings.output_dir / "instagram" / "20260811-100000-abcdef"
+            fresh.mkdir(parents=True)
+            (fresh / "reel.mp4").write_bytes(b"x" * 10)
+
+            service = CleanupService(settings, JobStore(settings.jobs_file), start=False)
+            result = service.sweep()
+
+            self.assertFalse(stale.exists(), "a months-old download folder should be swept")
+            self.assertTrue(fresh.exists(), "a download from minutes ago must survive")
+            self.assertEqual(result["download_dirs_removed"], 1)
+
+    def test_logs_for_live_jobs_are_kept(self) -> None:
+        from app.models.recording import RecordingJob
+        from app.services.cleanup_service import CleanupService
+        from app.services.job_store import JobStore
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            settings = self._settings(root)
+            store = JobStore(settings.jobs_file)
+            job = RecordingJob(username="someone")
+            store.save_job(job)
+
+            kept = settings.logs_dir / f"{job.id}.stdout.log"
+            kept.write_text("live job")
+            self._age(kept, 500)
+
+            orphan = settings.logs_dir / "11111111-2222-3333-4444-555555555555.stderr.log"
+            orphan.write_text("gone")
+            self._age(orphan, 500)
+
+            result = CleanupService(settings, store, start=False).sweep()
+
+            self.assertTrue(kept.exists(), "logs for an existing job must be kept")
+            self.assertFalse(orphan.exists())
+            self.assertEqual(result["logs_removed"], 1)
 
 
 class InstagramCleanupTests(unittest.TestCase):
