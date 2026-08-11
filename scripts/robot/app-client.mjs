@@ -49,7 +49,31 @@ export class AppClient {
     return `${this.origin}${this.rootPath}${path.startsWith("/") ? path : `/${path}`}`;
   }
 
-  async request(method, path, { body, timeoutMs = 30000, raw = false } = {}) {
+  /**
+   * Retries transient failures — a DNS hiccup or a dropped connection should
+   * not read as "the app is broken". Only safe methods retry by default:
+   * re-sending POST /recordings would start a second recording.
+   */
+  async request(method, path, { body, timeoutMs = 30000, raw = false, retries } = {}) {
+    const attempts = (retries ?? (method === "GET" ? 2 : 0)) + 1;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        return await this.#send(method, path, { body, timeoutMs, raw });
+      } catch (error) {
+        // HTTP-level errors are real answers from the app; only network-level
+        // failures and gateway errors are worth another go.
+        const transient = error.status === undefined || [502, 503, 504].includes(error.status);
+        lastError = error;
+        if (!transient || attempt === attempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+      }
+    }
+    throw lastError;
+  }
+
+  async #send(method, path, { body, timeoutMs, raw }) {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
       headers: body ? { "content-type": "application/json" } : undefined,
@@ -84,7 +108,8 @@ export class AppClient {
   }
 
   saveTikTokSession(sessionSs) {
-    return this.request("POST", "/auth/tiktok-cookies", { body: { session_ss: sessionSs } });
+    // Idempotent: writing the same session twice is harmless.
+    return this.request("POST", "/auth/tiktok-cookies", { body: { session_ss: sessionSs }, retries: 2 });
   }
 
   checkLive(source) {
@@ -105,6 +130,10 @@ export class AppClient {
 
   listRecordings() {
     return this.request("GET", "/recordings");
+  }
+
+  listWatchRecordings() {
+    return this.request("GET", "/watch-recordings");
   }
 
   downloadRecording(jobId) {

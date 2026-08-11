@@ -95,7 +95,9 @@ profile, routes social traffic through the SSH SOCKS proxy on `127.0.0.1:1080`
 (TikTok/Instagram are blocked on this network — see `~/dev/personal/wa-bypass`),
 finds an account that is live right now, then records, downloads, relays, and
 cleans up. Nobody live is reported as SKIP, not a failure. Flags: `--headed` to
-watch, `--skip-ig` for TikTok only. Design notes:
+watch, `--skip-ig` for TikTok only, `--user NAME` to test one account and skip
+discovery — useful because TikTok stops populating its LIVE feeds after a few
+automated visits. Design notes:
 `docs/superpowers/specs/2026-08-11-firefox-robot-design.md`.
 
 The target URL is **not** in the repo: the robot reads `ROBOT_BASE_URL` from the

@@ -51,13 +51,14 @@ required.
 
 ## Components
 
-Four modules under `scripts/robot/`, each independently understandable:
+Five modules under `scripts/robot/`, each independently understandable:
 
 | Module | Purpose | Depends on |
 |---|---|---|
 | `firefox-cookies.mjs` | Copy the cookie DB, extract TikTok/Instagram cookies, return them in Playwright format. Redacts on `toString`. | `node:sqlite`, `node:fs` |
 | `app-client.mjs` | Typed wrapper over the production HTTP API (health, auth, check-live, recordings, relay, Instagram downloads). No browser. | `fetch` |
-| `discover-live.mjs` | Open `tiktok.com/live` in Playwright Firefox with the injected cookies; return candidate usernames. | Playwright |
+| `discover-live.mjs` | Candidate live usernames: TikTok feeds, the app's own history, and a cross-run cache. | Playwright |
+| `discover-instagram.mjs` | Pick a post from the signed-in Instagram feed rather than hardcoding a shortcode. | Playwright |
 | `run.mjs` | Orchestrates the seven steps, owns the report, exit code, and cleanup. | the other three |
 
 ## The run
@@ -71,8 +72,19 @@ the end regardless of outcome.
 2. **Session sync** — read `GET /tiktok/health/details`; if
    `cookies_configured` is false, `POST /tiktok/auth/tiktok-cookies` with the
    extracted `session_ss` and confirm it flips to true.
-3. **Discovery** — scrape candidate usernames from the TikTok live feed, then
-   confirm each through `check-live` until one returns `can_record: true`.
+3. **Discovery** — three sources, in order: the TikTok LIVE feeds, accounts the
+   app already tracks (watch jobs and recording history), and a cache of
+   creators seen live on earlier runs (`.robot-out/seen-live.json`). Each
+   candidate is confirmed through `check-live` until one returns
+   `can_record: true`; `--user NAME` skips discovery entirely.
+
+   The extra sources are not belt-and-braces. TikTok stops populating the LIVE
+   feeds after a handful of automated visits — every feed, including the curated
+   category tabs, answers "No LIVE streams for you yet" on a page that is
+   provably still signed in (its `passport/web/account/info/` endpoint returns
+   200 for the account). Observed directly: 9 accounts at 09:05, 0 from 09:35
+   onward, same browser and exit IP, while the app confirmed two of those
+   accounts were live and recordable at 09:38.
 4. **Record through the UI** — drive the real page: fill `#record-source` and
    `#record-duration` (20s), submit, wait for the job card to reach a terminal
    phase. Asserts status `finished` with a `file_path`.
@@ -91,6 +103,9 @@ the end regardless of outcome.
   with a clear reason.
 - Every step has a hard timeout so a hung relay or stalled page cannot wedge the
   run.
+- Transient network failures retry with backoff before being called a failure; a
+  dropped connection should not read as "the app is broken". Only safe methods
+  retry — re-sending `POST /recordings` would start a second recording.
 - On failure: step name, HTTP status or selector that broke, and a screenshot
   written to `.robot-out/` (gitignored).
 - The recording job is deleted in a `finally`, so an assertion failure mid-flow

@@ -9,6 +9,7 @@
  *   npm run robot                 # full run
  *   npm run robot -- --headed     # watch it work
  *   npm run robot -- --skip-ig    # TikTok only
+ *   npm run robot -- --user NAME  # skip discovery, test this account
  *
  * Nobody live is a SKIP, not a failure: that is the normal state most of the
  * day, and a checker that cries wolf gets ignored.
@@ -21,13 +22,23 @@ import { join } from "node:path";
 import { AppClient, DEFAULT_BASE_URL, looksLikeMp4 } from "./app-client.mjs";
 import { launchFirefox, SOCKS_PROXY } from "./browser.mjs";
 import { discoverInstagramPost } from "./discover-instagram.mjs";
-import { discoverLiveUsernames, firstRecordable } from "./discover-live.mjs";
+import {
+  discoverLiveUsernames,
+  firstRecordable,
+  knownAccounts,
+  recallSeenLive,
+  rememberSeenLive,
+} from "./discover-live.mjs";
 import { readSocialCookies } from "./firefox-cookies.mjs";
 
 const OUT_DIR = ".robot-out";
 const RECORD_SECONDS = Number(process.env.ROBOT_RECORD_SECONDS ?? 20);
 const headed = process.argv.includes("--headed");
 const skipInstagram = process.argv.includes("--skip-ig");
+const forcedUser = (() => {
+  const index = process.argv.indexOf("--user");
+  return index !== -1 ? process.argv[index + 1] : null;
+})();
 
 class Skip extends Error {}
 const skip = (reason) => {
@@ -126,12 +137,21 @@ async function main() {
     ctx.context = launched.context;
     ctx.close = launched.close;
 
-    const candidates = await discoverLiveUsernames(ctx.context, { log });
-    if (!candidates.length) skip("TikTok's LIVE feed returned no accounts");
+    const candidates = forcedUser ? [forcedUser] : [
+      ...(await discoverLiveUsernames(ctx.context, { log })),
+      // TikTok throttles the LIVE feeds under automation; accounts the app
+      // already tracks, plus creators seen live on earlier runs, keep
+      // discovery working when that happens.
+      ...(await knownAccounts(client, { log })),
+      ...recallSeenLive(),
+    ];
+    const unique = [...new Set(candidates)];
+    if (!unique.length) skip("no candidates from TikTok's feeds or the app's own history");
 
-    const hit = await firstRecordable(client, candidates, { log });
-    if (!hit) skip(`none of ${candidates.length} candidates were recordable right now`);
+    const hit = await firstRecordable(client, unique, { log });
+    if (!hit) skip(`none of ${unique.length} candidate(s) were live right now`);
     ctx.username = hit.username;
+    rememberSeenLive([hit.username]);
     return `@${hit.username} is live and recordable`;
   }, ctx);
 
