@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
     file_service = FileService(settings.output_dir, job_store)
     cookie_service = CookieService(settings.recorder_cookies_file)
     browser_login_service = BrowserLoginService(settings.jobs_file.parents[1], cookie_service)
-    live_status_service = LiveStatusService(settings)
+    live_status_service = LiveStatusService(settings, cookie_service)
     recorder_service = RecorderService(settings, job_store, file_service)
     post_download_service = PostDownloadService(settings.output_dir, cookie_service)
     instagram_cookie_service = InstagramCookieService(settings.instagram_cookies_file)

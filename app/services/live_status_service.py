@@ -5,15 +5,16 @@ import subprocess
 
 from app.models.recording import LiveStatusResponse, RecordingCreateRequest
 from app.services.config import Settings
+from app.services.cookie_service import CookieService
+from app.services.live_stream import resolve_live_stream
 from app.services.redaction import redact_sensitive
 
 
-class LiveStatusService:
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-    def check(self, payload: RecordingCreateRequest) -> LiveStatusResponse:
-        script = """
+# The vendor recorder is still the best way to turn a username or URL into a
+# room id — that request is not fingerprinted. Everything after it (is the room
+# live, what is the stream URL) is done in-process with curl_cffi, because the
+# vendor's python-requests client gets 4003110 on restricted rooms.
+_ROOM_LOOKUP_SCRIPT = """
 import json
 import os
 import sys
@@ -29,55 +30,107 @@ api = TikTokAPI(proxy=None, cookies=read_cookies())
 
 username = payload.get("username")
 url = payload.get("url")
-
-result = {
-    "username": username,
-    "url": url,
-    "room_id": None,
-    "is_live": False,
-    "can_record": False,
-    "message": "",
-}
+out = {"username": username, "url": url, "room_id": None, "message": ""}
 
 try:
     if url:
         username, room_id = api.get_room_and_user_from_url(url)
     else:
         signed_url = api._tikrec_get_room_id_signed_url(username)
-        response = api.http_client.get(signed_url)
-        data = response.json()
+        data = api.http_client.get(signed_url).json()
         if data.get("message") == "user_not_found":
             raise Exception("Username / RoomID not found or the user has never been in live.")
         room_id = ((data.get("data") or {}).get("user") or {}).get("roomId")
-
-    result["username"] = username
-    result["room_id"] = room_id
-
+    out["username"] = username
+    out["room_id"] = room_id
     if not room_id:
-        result["message"] = "No active room was found for this account."
-    else:
-        is_live = api.is_room_alive(room_id)
-        result["is_live"] = bool(is_live)
-        if not is_live:
-            result["message"] = "Account found, but it is not live right now."
-        else:
-            live_url = api.get_live_url(room_id)
-            if live_url:
-                result["can_record"] = True
-                result["message"] = "Account is live and the stream URL is available."
-            else:
-                result["message"] = "Account looks live, but the stream URL is not available."
+        out["message"] = "No active room was found for this account."
 except Exception as exc:
-    result["message"] = str(exc)
+    out["message"] = str(exc)
 
-print(json.dumps(result))
+print(json.dumps(out))
 """
+
+
+class LiveStatusService:
+    def __init__(self, settings: Settings, cookie_service: CookieService | None = None) -> None:
+        self.settings = settings
+        self.cookie_service = cookie_service
+
+    def check(self, payload: RecordingCreateRequest) -> LiveStatusResponse:
+        lookup = self._lookup_room(payload)
+        room_id = lookup.get("room_id")
+        username = lookup.get("username") or payload.username
+
+        if not room_id:
+            return LiveStatusResponse(
+                username=username,
+                url=str(payload.url) if payload.url else None,
+                room_id=None,
+                is_live=False,
+                can_record=False,
+                message=self._normalize_message(lookup.get("message", "")),
+            )
+
+        try:
+            resolved = resolve_live_stream(str(room_id), self._cookies())
+        except Exception as exc:  # network/HTTP failure talking to TikTok
+            return LiveStatusResponse(
+                username=username,
+                url=str(payload.url) if payload.url else None,
+                room_id=str(room_id),
+                is_live=False,
+                can_record=False,
+                message=self._normalize_message(redact_sensitive(str(exc))),
+            )
+
+        can_record = bool(resolved["live_url"])
+        message = resolved["message"] or "Account is live and the stream URL is available."
+        return LiveStatusResponse(
+            username=username,
+            url=str(payload.url) if payload.url else None,
+            room_id=str(room_id),
+            is_live=bool(resolved["is_live"]),
+            can_record=can_record,
+            message=self._normalize_message(message),
+        )
+
+    def resolve_stream_url(self, payload: RecordingCreateRequest) -> dict:
+        """Room id plus a usable stream URL, for the live relay."""
+        lookup = self._lookup_room(payload)
+        room_id = lookup.get("room_id")
+        if not room_id:
+            return {"error": self._normalize_message(lookup.get("message", "")), "username": lookup.get("username")}
+
+        resolved = resolve_live_stream(str(room_id), self._cookies())
+        if not resolved["live_url"]:
+            return {
+                "error": self._normalize_message(resolved["message"] or "the live stream is not available"),
+                "username": lookup.get("username"),
+                "room_id": str(room_id),
+            }
+        return {
+            "username": lookup.get("username"),
+            "room_id": str(room_id),
+            "live_url": resolved["live_url"],
+            "error": None,
+        }
+
+    def _cookies(self) -> dict[str, str]:
+        if self.cookie_service is None:
+            return {}
+        try:
+            return {str(name): str(value) for name, value in self.cookie_service.read_cookies().items() if value}
+        except Exception:  # a broken cookie file should not break the check
+            return {}
+
+    def _lookup_room(self, payload: RecordingCreateRequest) -> dict:
         try:
             completed = subprocess.run(
                 [
                     self.settings.python_bin,
                     "-c",
-                    script,
+                    _ROOM_LOOKUP_SCRIPT,
                     json.dumps(
                         {
                             "username": payload.username,
@@ -89,8 +142,8 @@ print(json.dumps(result))
                 capture_output=True,
                 text=True,
                 check=False,
-                # A hung check would otherwise hold a request worker — and the watch
-                # loop thread — open forever.
+                # A hung lookup would otherwise hold a request worker — and the
+                # watch loop thread — open forever.
                 timeout=self.settings.live_resolve_timeout_seconds,
             )
         except subprocess.TimeoutExpired as exc:
@@ -105,8 +158,7 @@ print(json.dumps(result))
         data = json.loads(lines[-1])
         if stderr and not data.get("message"):
             data["message"] = redact_sensitive(stderr)
-        data["message"] = self._normalize_message(data.get("message", ""))
-        return LiveStatusResponse.model_validate(data)
+        return data
 
     def _normalize_message(self, message: str) -> str:
         normalized = (message or "").strip()

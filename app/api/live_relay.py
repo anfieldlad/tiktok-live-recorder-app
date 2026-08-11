@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import subprocess
 import threading
@@ -10,8 +9,7 @@ from typing import Callable, Iterator
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
-from app.models.recording import normalize_username
-from app.services.redaction import redact_sensitive
+from app.models.recording import RecordingCreateRequest, normalize_username
 from app.services.url_guard import validate_tiktok_url
 
 
@@ -20,86 +18,6 @@ logger = logging.getLogger(__name__)
 # New, self-contained router. It does not touch the existing recording/watch/download
 # routes or services — the only wiring is a single include_router() in app/main.py.
 router = APIRouter(prefix="/live", tags=["live-relay"])
-
-
-# Resolves the live stream CDN URL for a username/url using the vendor recorder's
-# TikTokAPI — exactly the path LiveStatusService uses, but it also returns the URL so we
-# can relay it. Runs in the recorder's own venv/cwd so its imports resolve.
-_RESOLVE_SCRIPT = """
-import json
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.abspath("src/main.py")))
-sys.path.append(os.path.abspath("."))
-
-from core.tiktok_api import TikTokAPI
-from utils.utils import read_cookies
-
-payload = json.loads(sys.argv[1])
-api = TikTokAPI(proxy=None, cookies=read_cookies())
-username = payload.get("username")
-url = payload.get("url")
-
-out = {"username": username, "room_id": None, "live_url": None, "error": None}
-try:
-    if url:
-        username, room_id = api.get_room_and_user_from_url(url)
-    else:
-        signed_url = api._tikrec_get_room_id_signed_url(username)
-        data = api.http_client.get(signed_url).json()
-        if data.get("message") == "user_not_found":
-            raise Exception("Username / RoomID not found or the user has never been in live.")
-        room_id = ((data.get("data") or {}).get("user") or {}).get("roomId")
-
-    out["username"] = username
-    out["room_id"] = room_id
-    if not room_id:
-        raise Exception("No active room was found for this account.")
-    if not api.is_room_alive(room_id):
-        raise Exception("Account found, but it is not live right now.")
-
-    live_url = api.get_live_url(room_id)
-    if not live_url:
-        raise Exception("Account looks live, but the stream URL is not available.")
-    out["live_url"] = live_url
-except Exception as exc:  # noqa: BLE001 - surface the message to the client
-    out["error"] = str(exc)
-
-print(json.dumps(out))
-"""
-
-
-def _resolve_live_url(settings, username: str | None, url: str | None) -> dict:
-    try:
-        completed = subprocess.run(
-            [
-                settings.python_bin,
-                "-c",
-                _RESOLVE_SCRIPT,
-                json.dumps({"username": username, "url": url}),
-            ],
-            cwd=str(settings.recorder_dir),
-            capture_output=True,
-            text=True,
-            check=False,
-            # Without a timeout a hung resolve pins a threadpool worker forever.
-            timeout=settings.live_resolve_timeout_seconds,
-        )
-    except subprocess.TimeoutExpired:
-        return {"error": "resolving the live stream timed out"}
-    stdout = (completed.stdout or "").strip()
-    if not stdout:
-        stderr = redact_sensitive((completed.stderr or "").strip())
-        return {"error": stderr or "live resolution returned no output"}
-    last_line = [line for line in stdout.splitlines() if line.strip()][-1]
-    try:
-        resolved = json.loads(last_line)
-    except json.JSONDecodeError:
-        return {"error": redact_sensitive(last_line)}
-    if resolved.get("error"):
-        resolved["error"] = redact_sensitive(str(resolved["error"]))
-    return resolved
 
 
 def _ffmpeg_stream(ffmpeg_bin: str, live_url: str, release_slot: Callable[[], None]) -> Iterator[bytes]:
@@ -198,7 +116,12 @@ def stream_live(request: Request, username: str | None = None, url: str | None =
         )
 
     try:
-        info = _resolve_live_url(settings, username, url)
+        # The stream URL is resolved with a browser-shaped client: TikTok
+        # answers the vendor's python-requests with 4003110 on restricted rooms.
+        live_status_service = request.app.state.live_status_service
+        info = live_status_service.resolve_stream_url(
+            RecordingCreateRequest(username=username, url=url)
+        )
         if info.get("error") or not info.get("live_url"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
