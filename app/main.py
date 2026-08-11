@@ -60,11 +60,16 @@ def create_app() -> FastAPI:
     app_root = PROJECT_ROOT / "app"
     templates = Jinja2Templates(directory=str(app_root / "templates"))
 
+    # The interactive docs publish the whole API surface, so they stay off in
+    # production until the API is behind authentication.
     app = FastAPI(
         title="TikTok Media Saver",
         version="0.1.0",
         description="Local tools for saving TikTok Live recordings and public TikTok posts.",
         root_path=settings.root_path,
+        docs_url=None if settings.is_production else "/docs",
+        redoc_url=None if settings.is_production else "/redoc",
+        openapi_url=None if settings.is_production else "/openapi.json",
     )
 
     app.state.settings = settings
@@ -146,12 +151,28 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    def redact_details(details: dict[str, object]) -> dict[str, object]:
+        """Keep the health payload useful without handing an unauthenticated
+        caller our filesystem layout and live process ids."""
+        if not settings.is_production:
+            return details
+        services = dict(details["services"])  # type: ignore[arg-type]
+        recorder = dict(services["recorder"])  # type: ignore[arg-type]
+        recorder.pop("active_processes", None)
+        services["recorder"] = recorder
+        details["services"] = services
+        details["stores"] = {
+            name: {key: value for key, value in diagnostics.items() if not key.endswith("file")}
+            for name, diagnostics in details["stores"].items()  # type: ignore[union-attr]
+        }
+        return details
+
     @app.get("/health/details")
     def health_details() -> dict[str, object]:
         jobs = job_store.list_jobs()
         watch_jobs = watch_store.list_jobs()
         active_recording = job_store.get_active_job()
-        return {
+        return redact_details({
             "status": "ok",
             "app_env": settings.app_env,
             "root_path": settings.root_path,
@@ -178,7 +199,7 @@ def create_app() -> FastAPI:
                 "jobs": job_store.diagnostics(),
                 "watch_jobs": watch_store.diagnostics(),
             },
-        }
+        })
 
     return app
 

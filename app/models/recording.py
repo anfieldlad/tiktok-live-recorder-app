@@ -8,9 +8,36 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
+from app.services.url_guard import validate_tiktok_url
+
+
+USERNAME_CHARACTERS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._"
+)
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def normalize_username(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = value.strip().lstrip("@")
+    if not normalized:
+        return None
+    if any(char not in USERNAME_CHARACTERS for char in normalized):
+        raise ValueError("username may only contain letters, numbers, dots, and underscores")
+    return normalized
+
+
+def normalize_source_url(value: Optional[HttpUrl]) -> Optional[HttpUrl]:
+    # The URL ends up in a recorder argv and in the vendor HTTP client, so it has
+    # to point at TikTok and nowhere else.
+    if value is None:
+        return None
+    validate_tiktok_url(str(value), label="url")
+    return value
 
 
 class RecordingStatus(str, Enum):
@@ -37,16 +64,13 @@ class RecordingCreateRequest(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def normalize_username(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        normalized = value.strip().lstrip("@")
-        if not normalized:
-            return None
-        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._")
-        if any(char not in allowed for char in normalized):
-            raise ValueError("username may only contain letters, numbers, dots, and underscores")
-        return normalized
+    def check_username(cls, value: Optional[str]) -> Optional[str]:
+        return normalize_username(value)
+
+    @field_validator("url")
+    @classmethod
+    def check_url(cls, value: Optional[HttpUrl]) -> Optional[HttpUrl]:
+        return normalize_source_url(value)
 
     @model_validator(mode="after")
     def validate_source(self) -> "RecordingCreateRequest":
@@ -171,16 +195,13 @@ class WatchCreateRequest(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def normalize_watch_username(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        normalized = value.strip().lstrip("@")
-        if not normalized:
-            return None
-        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._")
-        if any(char not in allowed for char in normalized):
-            raise ValueError("username may only contain letters, numbers, dots, and underscores")
-        return normalized
+    def check_watch_username(cls, value: Optional[str]) -> Optional[str]:
+        return normalize_username(value)
+
+    @field_validator("url")
+    @classmethod
+    def check_watch_url(cls, value: Optional[HttpUrl]) -> Optional[HttpUrl]:
+        return normalize_source_url(value)
 
     @model_validator(mode="after")
     def validate_watch_source(self) -> "WatchCreateRequest":

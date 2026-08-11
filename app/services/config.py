@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     cleanup_max_age_hours: int = 3
     watch_poll_interval_seconds: int = 45
     process_stop_grace_seconds: int = 12
+    live_resolve_timeout_seconds: int = 90
+    max_concurrent_live_relays: int = 3
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.strip().lower() == "production"
 
     def ensure_directories(self) -> None:
         self.jobs_file.parent.mkdir(parents=True, exist_ok=True)

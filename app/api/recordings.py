@@ -23,7 +23,10 @@ watch_router = APIRouter(prefix="/watch-recordings", tags=["watch-recordings"])
 def create_recording(request: Request, payload: RecordingCreateRequest) -> RecordingCreateResponse:
     recorder_service = request.app.state.recorder_service
     live_status_service = request.app.state.live_status_service
-    live_status = live_status_service.check(payload)
+    try:
+        live_status = live_status_service.check(payload)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     if not live_status.can_record:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=live_status.message)
     try:

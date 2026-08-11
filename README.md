@@ -513,7 +513,16 @@ PYTHON_BIN=/opt/ttl-downloader/vendor/tiktok-live-recorder/.venv/bin/python
 RECORDER_MODE=manual
 SKIP_UPDATE_CHECK=true
 CLEANUP_MAX_AGE_HOURS=3
+LIVE_RESOLVE_TIMEOUT_SECONDS=90
+MAX_CONCURRENT_LIVE_RELAYS=3
 ```
+
+`APP_ENV=production` also turns off the interactive API docs (`/docs`, `/redoc`,
+`/openapi.json`) and drops filesystem paths and process ids from
+`/health/details`, since neither the app nor nginx authenticates callers yet.
+`LIVE_RESOLVE_TIMEOUT_SECONDS` bounds each live-status/live-URL lookup, and
+`MAX_CONCURRENT_LIVE_RELAYS` caps how many `/live/stream` ffmpeg processes can
+run at once (extra callers get `429`).
 
 ### 8. Test the app manually
 

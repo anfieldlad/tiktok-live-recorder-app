@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import secrets
-import tempfile
 from pathlib import Path
 
 from app.services.chromium_cookies import (
@@ -11,6 +9,7 @@ from app.services.chromium_cookies import (
     read_cookies_for_domain,
     require_browser_import_support,
 )
+from app.services.secure_files import write_private_temp_text, write_private_text
 
 
 class InstagramCookieService:
@@ -20,7 +19,7 @@ class InstagramCookieService:
 
     def _ensure_file(self) -> None:
         if not self.cookie_file.exists():
-            self.cookie_file.write_text("{}\n", encoding="utf-8")
+            write_private_text(self.cookie_file, "{}\n")
 
     def is_configured(self) -> bool:
         data = self.read_cookies()
@@ -35,10 +34,10 @@ class InstagramCookieService:
 
     def save_session_cookie(self, sessionid: str) -> None:
         payload = {"sessionid": sessionid}
-        self.cookie_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        write_private_text(self.cookie_file, json.dumps(payload, indent=2) + "\n")
 
     def save_cookie_map(self, cookies: dict[str, str]) -> None:
-        self.cookie_file.write_text(json.dumps(cookies, indent=2) + "\n", encoding="utf-8")
+        write_private_text(self.cookie_file, json.dumps(cookies, indent=2) + "\n")
 
     def import_from_browser(self, browser_name: str) -> dict:
         require_browser_import_support()
@@ -82,7 +81,7 @@ class InstagramCookieService:
         return cookies
 
     def clear(self) -> None:
-        self.cookie_file.write_text("{}\n", encoding="utf-8")
+        write_private_text(self.cookie_file, "{}\n")
 
     def write_netscape_cookie_file(self) -> Path | None:
         if not self.is_configured():
@@ -98,10 +97,7 @@ class InstagramCookieService:
         if not normalized:
             return None
 
-        cookie_file = Path(tempfile.gettempdir()) / f"instagram-cookies-{secrets.token_hex(8)}.txt"
         lines = ["# Netscape HTTP Cookie File"]
         for name, value in sorted(normalized.items()):
             lines.append(f".instagram.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}")
-        cookie_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        cookie_file.chmod(0o600)
-        return cookie_file
+        return write_private_temp_text("\n".join(lines) + "\n", prefix="instagram-cookies-")

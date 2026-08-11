@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -12,7 +13,10 @@ from app.instagram.services.instagram_download_service import (
     InstagramDownloadService,
 )
 from app.main import create_app
+from app.services.cookie_service import CookieService
 from app.services.job_store import JobStore
+from app.services.redaction import redact_sensitive
+from app.services.url_guard import ensure_public_http_url, validate_tiktok_url
 from app.services.watch_store import WatchStore
 
 
@@ -61,8 +65,10 @@ class AppReliabilityTests(unittest.TestCase):
             "PYTHON_BIN": "python",
             "ROOT_PATH": "",
         }
+        env_overrides.update(getattr(self, "extra_env", {}))
         for key, value in env_overrides.items():
             os.environ[key] = value
+            self.addCleanup(os.environ.pop, key, None)
         (temp_root / "vendor" / "recorder" / "src").mkdir(parents=True, exist_ok=True)
         app = create_app()
         self.addCleanup(self.temp_dir.cleanup)
@@ -103,6 +109,53 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertIn("thread_alive", body["services"]["watch"])
         self.assertIn("recovery_count", body["stores"]["jobs"])
 
+    def test_recording_and_watch_reject_non_tiktok_urls(self) -> None:
+        client = self.create_test_client()
+
+        for path in ("/recordings", "/watch-recordings"):
+            response = client.post(path, json={"url": "https://evil.example.com/@x"})
+            self.assertEqual(response.status_code, 422, path)
+            self.assertIn("TikTok URL", str(response.json()["detail"]), path)
+
+    def test_live_stream_rejects_non_tiktok_url(self) -> None:
+        client = self.create_test_client()
+
+        response = client.get("/live/stream", params={"url": "http://169.254.169.254/latest/"})
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("TikTok URL", str(response.json()["detail"]))
+
+    def test_live_stream_rejects_malformed_username(self) -> None:
+        client = self.create_test_client()
+
+        response = client.get("/live/stream", params={"username": 'evil"\nX-Injected: 1'})
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_live_stream_refuses_when_all_relay_slots_are_busy(self) -> None:
+        client = self.create_test_client()
+        slots = threading.BoundedSemaphore(1)
+        client.app.state.live_relay_slots = slots
+        self.assertTrue(slots.acquire(blocking=False))
+        self.addCleanup(slots.release)
+
+        response = client.get("/live/stream", params={"username": "someone"})
+
+        self.assertEqual(response.status_code, 429)
+
+    def test_production_hides_docs_and_diagnostic_paths(self) -> None:
+        self.extra_env = {"APP_ENV": "production"}
+        client = self.create_test_client()
+
+        self.assertEqual(client.get("/docs").status_code, 404)
+        self.assertEqual(client.get("/openapi.json").status_code, 404)
+
+        body = client.get("/health/details").json()
+        self.assertEqual(body["status"], "ok")
+        self.assertNotIn("active_processes", body["services"]["recorder"])
+        self.assertNotIn("jobs_file", body["stores"]["jobs"])
+        self.assertIn("recovery_count", body["stores"]["jobs"])
+
     def test_instagram_page_renders_with_session_panel(self) -> None:
         client = self.create_test_client()
 
@@ -138,6 +191,89 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertIn("instagram", body)
         self.assertIn("cookies_configured", body["instagram"])
         self.assertIn("browser_login", body["instagram"])
+
+
+class UrlGuardTests(unittest.TestCase):
+    def test_tiktok_url_accepts_known_hosts(self) -> None:
+        for url in (
+            "https://www.tiktok.com/@example/live",
+            "https://vt.tiktok.com/abc123/",
+            "http://tiktok.com/@example/video/1",
+        ):
+            self.assertEqual(validate_tiktok_url(url), url)
+
+    def test_tiktok_url_rejects_other_hosts_and_schemes(self) -> None:
+        for url in (
+            "https://evil.example.com/@x",
+            "https://tiktok.com.evil.example.com/@x",
+            "file:///etc/passwd",
+            "http://169.254.169.254/latest/meta-data/",
+        ):
+            with self.assertRaises(ValueError):
+                validate_tiktok_url(url)
+
+    def test_public_url_guard_rejects_internal_addresses(self) -> None:
+        for url in (
+            "http://127.0.0.1/x",
+            "http://169.254.169.254/latest/meta-data/",
+            "http://10.0.0.5/x",
+            "http://192.168.1.1/x",
+            "http://[::1]/x",
+            "ftp://93.184.216.34/x",
+        ):
+            with self.assertRaises(ValueError):
+                ensure_public_http_url(url)
+
+    def test_public_url_guard_allows_public_literal(self) -> None:
+        url = "https://93.184.216.34/media.mp4"
+        self.assertEqual(ensure_public_http_url(url), url)
+
+
+class RedactionTests(unittest.TestCase):
+    def test_query_strings_and_session_values_are_stripped(self) -> None:
+        text = (
+            "failed to fetch https://webcast.tiktok.com/room/enter/?msToken=SECRET&sig=abc "
+            "with session_ss=TOPSECRET"
+        )
+        redacted = redact_sensitive(text)
+
+        self.assertNotIn("SECRET", redacted)
+        self.assertNotIn("TOPSECRET", redacted)
+        self.assertIn("https://webcast.tiktok.com/room/enter/?[redacted]", redacted)
+
+    def test_plain_text_is_untouched(self) -> None:
+        self.assertEqual(redact_sensitive("recorder exited with code 1"), "recorder exited with code 1")
+
+
+@unittest.skipIf(os.name == "nt", "POSIX file modes only")
+class CookieFilePermissionTests(unittest.TestCase):
+    def test_session_file_is_not_world_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cookie_file = Path(temp_dir) / "cookies.json"
+            service = CookieService(cookie_file)
+
+            self.assertEqual(cookie_file.stat().st_mode & 0o077, 0)
+
+            service.save_session_cookie("a-session-value")
+            self.assertEqual(cookie_file.stat().st_mode & 0o077, 0)
+            self.assertTrue(service.is_configured())
+
+    def test_temp_cookie_file_for_yt_dlp_is_private(self) -> None:
+        from app.services.post_download_service import PostDownloadService
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            cookie_service = CookieService(temp_root / "cookies.json")
+            cookie_service.save_session_cookie("a-session-value")
+            service = PostDownloadService(temp_root / "output", cookie_service)
+
+            cookie_file = service._write_cookie_file()
+            self.assertIsNotNone(cookie_file)
+            try:
+                self.assertEqual(cookie_file.stat().st_mode & 0o077, 0)
+                self.assertIn("session_ss", cookie_file.read_text(encoding="utf-8"))
+            finally:
+                cookie_file.unlink(missing_ok=True)
 
 
 class InstagramCleanupTests(unittest.TestCase):

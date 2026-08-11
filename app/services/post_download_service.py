@@ -4,7 +4,6 @@ import secrets
 import json
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +13,13 @@ from urllib.parse import urlparse
 from curl_cffi import requests
 
 from app.services.cookie_service import CookieService
+from app.services.secure_files import write_private_temp_text
+from app.services.url_guard import ensure_public_http_url, validate_tiktok_url
+
+
+# The fallback fetches whatever media URLs a third-party API hands back, so cap
+# how much of the disk one post can consume.
+MAX_MEDIA_BYTES = 1024 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -31,14 +37,7 @@ class PostDownloadService:
         self._results: dict[str, PostDownloadResult] = {}
 
     def validate_url(self, url: str) -> str:
-        normalized = url.strip()
-        parsed = urlparse(normalized)
-        hostname = parsed.hostname or ""
-        if parsed.scheme not in {"http", "https"}:
-            raise ValueError("download URL must start with http or https")
-        if not hostname or not (hostname == "tiktok.com" or hostname.endswith(".tiktok.com")):
-            raise ValueError("download URL must be a TikTok URL")
-        return normalized
+        return validate_tiktok_url(url, label="download URL")
 
     def download(self, url: str) -> PostDownloadResult:
         normalized_url = self.validate_url(url)
@@ -135,36 +134,74 @@ class PostDownloadService:
             for index, image_url in enumerate(image_urls, start=1):
                 if not isinstance(image_url, str):
                     continue
-                media_response = requests.get(
-                    image_url,
-                    impersonate="chrome",
-                    headers={"Referer": "https://www.tiktok.com/"},
-                    timeout=60,
+                files.append(
+                    self._fetch_media(
+                        image_url,
+                        download_dir,
+                        name_stem=f"image-{index:03d}",
+                        default_extension=".jpg",
+                        timeout=60,
+                    )
                 )
-                media_response.raise_for_status()
-                extension = self._media_extension(media_response.headers.get("content-type"), image_url, ".jpg")
-                image_path = download_dir / f"image-{index:03d}{extension}"
-                image_path.write_bytes(media_response.content)
-                files.append(image_path)
         else:
             video_url = data.get("wmplay") or data.get("play")
             if not isinstance(video_url, str) or not video_url:
                 return None
-            media_response = requests.get(
-                video_url,
-                impersonate="chrome",
-                headers={"Referer": "https://www.tiktok.com/"},
-                timeout=120,
+            files.append(
+                self._fetch_media(
+                    video_url,
+                    download_dir,
+                    name_stem=str(data.get("id") or download_id),
+                    default_extension=".mp4",
+                    timeout=120,
+                )
             )
-            media_response.raise_for_status()
-            extension = self._media_extension(media_response.headers.get("content-type"), video_url, ".mp4")
-            video_path = download_dir / f"{data.get('id') or download_id}{extension}"
-            video_path.write_bytes(media_response.content)
-            files.append(video_path)
 
         if len(files) == 1:
             return None
         return PostDownloadResult(download_id=download_id, output_dir=download_dir, files=files)
+
+    def _fetch_media(
+        self,
+        media_url: str,
+        download_dir: Path,
+        *,
+        name_stem: str,
+        default_extension: str,
+        timeout: int,
+    ) -> Path:
+        """Fetch one media file the fallback API pointed us at.
+
+        The URL comes from a third party, so it is checked against private
+        address space before the request and streamed with a size ceiling
+        instead of being buffered whole.
+        """
+        ensure_public_http_url(media_url, label="media URL")
+        response = requests.get(
+            media_url,
+            impersonate="chrome",
+            headers={"Referer": "https://www.tiktok.com/"},
+            timeout=timeout,
+            stream=True,
+        )
+        try:
+            response.raise_for_status()
+            extension = self._media_extension(response.headers.get("content-type"), media_url, default_extension)
+            media_path = download_dir / f"{name_stem}{extension}"
+            written = 0
+            try:
+                with media_path.open("wb") as handle:
+                    for chunk in response.iter_content(chunk_size=65536):
+                        written += len(chunk)
+                        if written > MAX_MEDIA_BYTES:
+                            raise RuntimeError("media file is larger than the download size limit")
+                        handle.write(chunk)
+            except Exception:
+                media_path.unlink(missing_ok=True)
+                raise
+            return media_path
+        finally:
+            response.close()
 
     def _new_download_id(self) -> str:
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
@@ -212,10 +249,7 @@ class PostDownloadService:
         if not normalized:
             return None
 
-        cookie_file = Path(tempfile.gettempdir()) / f"tiktok-post-cookies-{secrets.token_hex(8)}.txt"
         lines = ["# Netscape HTTP Cookie File"]
         for name, value in sorted(normalized.items()):
             lines.append(f".tiktok.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}")
-        cookie_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        cookie_file.chmod(0o600)
-        return cookie_file
+        return write_private_temp_text("\n".join(lines) + "\n", prefix="tiktok-post-cookies-")

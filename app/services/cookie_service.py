@@ -9,6 +9,7 @@ from app.services.chromium_cookies import (
     read_cookies_for_domain,
     require_browser_import_support,
 )
+from app.services.secure_files import write_private_text
 
 
 class CookieService:
@@ -18,7 +19,7 @@ class CookieService:
 
     def _ensure_file(self) -> None:
         if not self.cookie_file.exists():
-            self.cookie_file.write_text("{}\n", encoding="utf-8")
+            write_private_text(self.cookie_file, "{}\n")
 
     def is_configured(self) -> bool:
         data = self.read_cookies()
@@ -33,10 +34,10 @@ class CookieService:
 
     def save_session_cookie(self, session_ss: str) -> None:
         payload = {"session_ss": session_ss}
-        self.cookie_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        write_private_text(self.cookie_file, json.dumps(payload, indent=2) + "\n")
 
     def save_cookie_map(self, cookies: dict[str, str]) -> None:
-        self.cookie_file.write_text(json.dumps(cookies, indent=2) + "\n", encoding="utf-8")
+        write_private_text(self.cookie_file, json.dumps(cookies, indent=2) + "\n")
 
     def import_from_browser(self, browser_name: str) -> dict:
         require_browser_import_support()
@@ -80,4 +81,4 @@ class CookieService:
         return cookies
 
     def clear(self) -> None:
-        self.cookie_file.write_text("{}\n", encoding="utf-8")
+        write_private_text(self.cookie_file, "{}\n")

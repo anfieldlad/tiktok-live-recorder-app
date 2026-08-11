@@ -5,6 +5,7 @@ import subprocess
 
 from app.models.recording import LiveStatusResponse, RecordingCreateRequest
 from app.services.config import Settings
+from app.services.redaction import redact_sensitive
 
 
 class LiveStatusService:
@@ -71,33 +72,39 @@ except Exception as exc:
 
 print(json.dumps(result))
 """
-        completed = subprocess.run(
-            [
-                self.settings.python_bin,
-                "-c",
-                script,
-                json.dumps(
-                    {
-                        "username": payload.username,
-                        "url": str(payload.url) if payload.url else None,
-                    }
-                ),
-            ],
-            cwd=str(self.settings.recorder_dir),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                [
+                    self.settings.python_bin,
+                    "-c",
+                    script,
+                    json.dumps(
+                        {
+                            "username": payload.username,
+                            "url": str(payload.url) if payload.url else None,
+                        }
+                    ),
+                ],
+                cwd=str(self.settings.recorder_dir),
+                capture_output=True,
+                text=True,
+                check=False,
+                # A hung check would otherwise hold a request worker — and the watch
+                # loop thread — open forever.
+                timeout=self.settings.live_resolve_timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("the live status check timed out") from exc
 
         stdout = completed.stdout.strip()
         stderr = completed.stderr.strip()
         if not stdout:
-            raise RuntimeError(stderr or "live status check returned no output")
+            raise RuntimeError(redact_sensitive(stderr) or "live status check returned no output")
 
         lines = [line for line in stdout.splitlines() if line.strip()]
         data = json.loads(lines[-1])
         if stderr and not data.get("message"):
-            data["message"] = stderr
+            data["message"] = redact_sensitive(stderr)
         data["message"] = self._normalize_message(data.get("message", ""))
         return LiveStatusResponse.model_validate(data)
 

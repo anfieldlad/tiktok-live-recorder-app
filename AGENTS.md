@@ -84,8 +84,6 @@ Run browser e2e tests with:
 npm run test:e2e
 ```
 
-If adding behavior that changes routing, service state, store recovery, diagnostics, downloads, or watch/record flows, add or update tests under `tests/`.
-
 ## Coding Guidelines
 
 - Follow the existing small-service structure in `app/services/` instead of adding large cross-cutting modules.
@@ -118,6 +116,21 @@ recorder) and handles local cookies/session data. Be careful when changing:
 TikTok and Instagram sessions are stored separately (`recorder_cookies.json`
 keyed on `session_ss`; `data/instagram_cookies.json` keyed on `sessionid`).
 Avoid exposing cookie/session values in logs, diagnostics, errors, or templates.
+
+Three small modules exist to keep that easy — use them instead of hand-rolling:
+
+- `app/services/url_guard.py` — every client-supplied URL that reaches a
+  subprocess or the vendor HTTP client goes through `validate_tiktok_url`, and
+  every URL that came back from a third party goes through
+  `ensure_public_http_url` before we fetch it.
+- `app/services/secure_files.py` — anything holding session material is written
+  0600 at creation time (`write_private_text` / `write_private_temp_text`).
+- `app/services/redaction.py` — subprocess output that is served back over the
+  API passes through `redact_sensitive` first; the raw text stays in the log
+  files under `logs/`.
+
+The API itself is still unauthenticated — do not add endpoints that widen what
+an anonymous caller can reach until that is fixed.
 
 ## Deploy
 

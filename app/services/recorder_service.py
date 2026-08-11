@@ -18,6 +18,7 @@ from app.models.recording import (
 from app.services.config import Settings
 from app.services.file_service import FileService
 from app.services.job_store import JobStore
+from app.services.redaction import redact_sensitive
 
 
 logger = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ class RecorderService:
                         "status": RecordingStatus.failed,
                         "progress": RecordingProgress.failed,
                         "progress_message": "The recording ended with an unexpected error.",
-                        "error": str(exc),
+                        "error": redact_sensitive(str(exc)),
                         "finished_at": utc_now(),
                         "pid": None,
                     }
@@ -155,7 +156,7 @@ class RecorderService:
                         "status": RecordingStatus.failed,
                         "progress": RecordingProgress.failed,
                         "progress_message": "The recorder could not be started.",
-                        "error": str(exc),
+                        "error": redact_sensitive(str(exc)),
                         "finished_at": utc_now(),
                     }
                 ),
@@ -199,8 +200,9 @@ class RecorderService:
 
         stdout_handle.close()
         stderr_handle.close()
-        stdout = self._read_log_tail(stdout_log_path)
-        stderr = self._read_log_tail(stderr_log_path)
+        # The full, unredacted output stays in the per-job log files on disk.
+        stdout = redact_sensitive(self._read_log_tail(stdout_log_path))
+        stderr = redact_sensitive(self._read_log_tail(stderr_log_path))
         self.job_store.update_job(
             job_id,
             lambda current: current.model_copy(
@@ -328,7 +330,9 @@ class RecorderService:
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         else:
-            kwargs["preexec_fn"] = os.setsid
+            # Same effect as preexec_fn=os.setsid, but preexec_fn is unsafe in a
+            # threaded process and jobs are started from worker threads.
+            kwargs["start_new_session"] = True
         return subprocess.Popen(**kwargs)
 
     def _read_log_tail(self, path: Path, max_chars: int = 4000) -> str:
