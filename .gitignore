@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Virtual environments
 .venv/
@@ -11,9 +14,13 @@ __pycache__/
 node_modules/
 test-results/
 playwright-report/
+blob-report/
+.robot-out/
 
 # Local environment
 .env
+.env.*
+!.env.example
 .ssh-config.local
 
 # Runtime data
@@ -27,12 +34,18 @@ tools/
 # macOS folder metadata
 .DS_Store
 
-# Local app state
-data/browser-login/
-data/instagram-browser-login/
-data/jobs.json
-data/watch_jobs.json
-data/instagram_cookies.json
+# Local app state. Everything under data/ is runtime: job stores and their
+# corrupt-file backups, session cookies, and browser-login profiles. None of it
+# belongs in git, so the whole directory is ignored rather than named file by
+# file — new runtime files are covered automatically.
+# If you ever need a fixture in here, add it deliberately: git add -f data/<file>
+data/
+
+# Browser cookie databases. The robot copies Firefox's cookies.sqlite (plus its
+# -wal/-shm sidecars) to a temp dir, but never let one land here by accident.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 
 # Local editor / tooling config
 .claude/

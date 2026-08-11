@@ -84,6 +84,27 @@ Run browser e2e tests with:
 npm run test:e2e
 ```
 
+Drive the **deployed** app end to end with the Firefox robot (`scripts/robot/`):
+
+```bash
+npm run robot
+```
+
+It borrows the TikTok/Instagram sessions from the `~/.proxy-firefox` Firefox
+profile, routes social traffic through the SSH SOCKS proxy on `127.0.0.1:1080`
+(TikTok/Instagram are blocked on this network — see `~/dev/personal/wa-bypass`),
+finds an account that is live right now, then records, downloads, relays, and
+cleans up. Nobody live is reported as SKIP, not a failure. Flags: `--headed` to
+watch, `--skip-ig` for TikTok only. Design notes:
+`docs/superpowers/specs/2026-08-11-firefox-robot-design.md`.
+
+The target URL is **not** in the repo: the robot reads `ROBOT_BASE_URL` from the
+environment or from a gitignored `.env.robot`, falling back to
+`http://127.0.0.1:8000`. The deployed API is unauthenticated, so treat its
+address like a credential — same rule `SSH.md` applies to server details.
+
+If adding behavior that changes routing, service state, store recovery, diagnostics, downloads, or watch/record flows, add or update tests under `tests/`.
+
 ## Coding Guidelines
 
 - Follow the existing small-service structure in `app/services/` instead of adding large cross-cutting modules.
