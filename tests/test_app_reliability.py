@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 import threading
@@ -274,6 +275,49 @@ class CookieFilePermissionTests(unittest.TestCase):
                 self.assertIn("session_ss", cookie_file.read_text(encoding="utf-8"))
             finally:
                 cookie_file.unlink(missing_ok=True)
+
+
+class TikTokCookieNamingTests(unittest.TestCase):
+    """TikTok authenticates on sessionid/sessionid_ss and has no session_ss
+    cookie; writing only session_ss left the recorder anonymous, so age-gated
+    lives were refused even for an account that could watch them."""
+
+    def test_single_value_is_written_under_every_session_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cookie_file = Path(temp_dir) / "cookies.json"
+            service = CookieService(cookie_file)
+
+            service.save_session_cookie("a-real-session-value")
+
+            stored = json.loads(cookie_file.read_text(encoding="utf-8"))
+            self.assertEqual(stored["sessionid"], "a-real-session-value")
+            self.assertEqual(stored["sessionid_ss"], "a-real-session-value")
+            self.assertEqual(stored["session_ss"], "a-real-session-value")
+            self.assertTrue(service.is_configured())
+
+    def test_configured_when_only_sessionid_is_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cookie_file = Path(temp_dir) / "cookies.json"
+            service = CookieService(cookie_file)
+            service.save_cookie_map({"sessionid": "x", "tt-target-idc": "alisg"})
+
+            self.assertTrue(service.is_configured())
+
+    def test_full_cookie_map_is_accepted_over_the_api(self) -> None:
+        client = AppReliabilityTests.create_test_client(self)
+
+        response = client.post(
+            "/auth/tiktok-cookies",
+            json={"cookies": {"sessionid": "abc123", "tt-target-idc": "alisg"}},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["configured"])
+
+    def test_empty_payload_is_rejected(self) -> None:
+        client = AppReliabilityTests.create_test_client(self)
+
+        self.assertEqual(client.post("/auth/tiktok-cookies", json={}).status_code, 422)
 
 
 class InstagramCleanupTests(unittest.TestCase):

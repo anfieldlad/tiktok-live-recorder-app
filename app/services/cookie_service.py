@@ -12,6 +12,11 @@ from app.services.chromium_cookies import (
 from app.services.secure_files import write_private_text
 
 
+# TikTok authenticates on sessionid/sessionid_ss; session_ss is kept for
+# backwards compatibility with cookie files this app wrote earlier.
+SESSION_COOKIE_NAMES = ("sessionid", "sessionid_ss", "session_ss")
+
+
 class CookieService:
     def __init__(self, cookie_file: Path) -> None:
         self.cookie_file = cookie_file.resolve()
@@ -23,7 +28,7 @@ class CookieService:
 
     def is_configured(self) -> bool:
         data = self.read_cookies()
-        return bool(data.get("session_ss"))
+        return any(bool(data.get(name)) for name in SESSION_COOKIE_NAMES)
 
     def read_cookies(self) -> dict:
         self._ensure_file()
@@ -32,8 +37,16 @@ class CookieService:
             return {}
         return json.loads(raw)
 
-    def save_session_cookie(self, session_ss: str) -> None:
-        payload = {"session_ss": session_ss}
+    def save_session_cookie(self, session_value: str) -> None:
+        """Store one session value under every name TikTok might look for.
+
+        The recorder writes these keys straight out as cookie names, and TikTok
+        authenticates on `sessionid`/`sessionid_ss` — it has no `session_ss`
+        cookie at all. Writing only `session_ss` left the recorder effectively
+        anonymous, so age-gated rooms came back as "Live is private, login
+        required" even for an account that could watch them in a browser.
+        """
+        payload = {name: session_value for name in SESSION_COOKIE_NAMES}
         write_private_text(self.cookie_file, json.dumps(payload, indent=2) + "\n")
 
     def save_cookie_map(self, cookies: dict[str, str]) -> None:

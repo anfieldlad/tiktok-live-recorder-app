@@ -252,15 +252,38 @@ class LiveStatusResponse(BaseModel):
 
 
 class TikTokCookieRequest(BaseModel):
-    session_ss: str = Field(min_length=10)
+    """Either one session value, or the browser's whole TikTok cookie jar.
+
+    The full map is preferred: restricted lives need more than the session id
+    (`tt-target-idc` routes to the right data centre, `sid_guard` and friends
+    carry the login), and passing the browser's real cookie names is what the
+    recorder ends up sending.
+    """
+
+    session_ss: Optional[str] = Field(default=None, min_length=10)
+    cookies: Optional[dict[str, str]] = None
 
     @field_validator("session_ss")
     @classmethod
-    def normalize_session(cls, value: str) -> str:
+    def normalize_session(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
         normalized = value.strip()
-        if not normalized:
-            raise ValueError("session_ss is required")
-        return normalized
+        return normalized or None
+
+    @field_validator("cookies")
+    @classmethod
+    def normalize_cookies(cls, value: Optional[dict[str, str]]) -> Optional[dict[str, str]]:
+        if not value:
+            return None
+        cleaned = {str(k).strip(): str(v) for k, v in value.items() if str(k).strip() and v}
+        return cleaned or None
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> "TikTokCookieRequest":
+        if not self.session_ss and not self.cookies:
+            raise ValueError("provide session_ss or a cookies map")
+        return self
 
 
 class TikTokCookieStatusResponse(BaseModel):

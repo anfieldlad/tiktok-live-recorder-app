@@ -27,7 +27,10 @@ def get_auth_status(request: Request) -> TikTokCookieStatusResponse:
 def save_tiktok_cookies(request: Request, payload: TikTokCookieRequest) -> TikTokCookieStatusResponse:
     cookie_service = request.app.state.cookie_service
     settings = request.app.state.settings
-    cookie_service.save_session_cookie(payload.session_ss)
+    if payload.cookies:
+        cookie_service.save_cookie_map(payload.cookies)
+    else:
+        cookie_service.save_session_cookie(payload.session_ss)
     return TikTokCookieStatusResponse(
         configured=True,
         cookie_file=str(settings.recorder_cookies_file.resolve()),
