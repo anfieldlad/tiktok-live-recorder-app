@@ -109,6 +109,34 @@ function initRecordPage() {
     }).join("");
   }
 
+
+  // A background poll must not clobber the notice describing what the user just
+  // did: a single dropped request used to replace "This user is not live right
+  // now." with the browser's raw "Failed to fetch". Tolerate blips, and only
+  // speak up once the app is really unreachable.
+  const POLL_FAILURES_BEFORE_WARNING = 3;
+  let consecutivePollFailures = 0;
+  let pollWarningShown = false;
+
+  function onPollSuccess() {
+    consecutivePollFailures = 0;
+    if (pollWarningShown) {
+      pollWarningShown = false;
+      setNotice(recordNotice, "Reconnected.");
+    }
+  }
+
+  function onPollFailure() {
+    consecutivePollFailures += 1;
+    if (consecutivePollFailures < POLL_FAILURES_BEFORE_WARNING) return;
+    pollWarningShown = true;
+    setNotice(recordNotice, "Lost connection to the app — still retrying…", "error");
+  }
+
+  function pollOnce(load) {
+    return load().then(onPollSuccess, onPollFailure);
+  }
+
   async function fetchRecordings() {
     const response = await fetch(appPath("/recordings"));
     if (!response.ok) throw new Error(`Failed to load recordings: ${response.status}`);
@@ -161,15 +189,17 @@ function initRecordPage() {
     autoRefreshButton.textContent = `Auto-refresh: ${enabled ? "On" : "Off"}`;
     autoRefreshButton.setAttribute("aria-pressed", String(enabled));
     if (refreshTimer) window.clearInterval(refreshTimer);
-    refreshTimer = enabled ? window.setInterval(() => { fetchRecordings().catch((error) => setNotice(recordNotice, error.message, "error")); }, 5000) : null;
+    refreshTimer = enabled ? window.setInterval(() => pollOnce(fetchRecordings), 5000) : null;
   }
 
   recordForm.addEventListener("submit", submitRecording);
   clearRecordFormButton.addEventListener("click", () => { recordForm.reset(); clearRecordHelperActions(); setNotice(recordNotice, "Record form cleared."); });
-  refreshRecordingsButton.addEventListener("click", () => { fetchRecordings().catch((error) => setNotice(recordNotice, error.message, "error")); });
+  refreshRecordingsButton.addEventListener("click", () => {
+    fetchRecordings().then(onPollSuccess, (error) => setNotice(recordNotice, error.message || "Could not reach the app.", "error"));
+  });
   autoRefreshButton.addEventListener("click", () => setAutoRefresh(!autoRefreshEnabled));
   jobsContainer.addEventListener("click", handleJobAction);
 
   setAutoRefresh(true);
-  fetchRecordings().catch((error) => setNotice(recordNotice, error.message, "error"));
+  pollOnce(fetchRecordings);
 }
