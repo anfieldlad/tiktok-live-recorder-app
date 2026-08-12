@@ -104,6 +104,9 @@ function initInstagramDownloadPage() {
         </dl>
         ${downloadAll ? `<div class="row">${downloadAll}</div>` : ""}
         <div class="file-list">${fileRows}</div>
+        <footer class="job-actions">
+          <button class="btn btn-danger" data-action="delete-download" data-id="${escapeHtml(download.download_id)}">Delete from server</button>
+        </footer>
       </article>
     `;
   }
@@ -152,4 +155,17 @@ function initInstagramDownloadPage() {
 
   form.addEventListener("submit", submitDownload);
   clearButton.addEventListener("click", clearForm);
+
+  resultContainer.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action='delete-download']");
+    if (!button) return;
+    try {
+      const response = await fetch(appPath(`/instagram/downloads/${button.dataset.id}`), { method: "DELETE" });
+      if (!response.ok) throw new Error(await readApiError(response, "Could not delete the download."));
+      resultContainer.innerHTML = emptyState();
+      setNotice(notice, "Deleted from the server.");
+    } catch (error) {
+      setNotice(notice, error.message, "error");
+    }
+  });
 }

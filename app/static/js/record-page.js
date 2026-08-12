@@ -37,6 +37,13 @@ function initRecordPage() {
     return `${size.toFixed(size >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
   }
 
+  function retentionNote(job) {
+    if (!job.fetched_at) return "";
+    const removesAt = new Date(new Date(job.fetched_at).getTime() + 24 * 3600 * 1000);
+    const hoursLeft = Math.max(0, Math.round((removesAt - Date.now()) / 3600000));
+    return `Saved — removed in ~${hoursLeft}h`;
+  }
+
   function humanizePhase(progress) {
     return ({ preparing: "Preparing", recording: "Recording", finalizing: "Finalizing", ready: "Ready", failed: "Failed", stopped: "Stopped" })[progress] || progress || "Unknown";
   }
@@ -101,6 +108,7 @@ function initRecordPage() {
             <div><dt>Finished</dt><dd>${escapeHtml(formatDate(job.finished_at))}</dd></div>
             <div><dt>Duration</dt><dd>${job.duration ? `${escapeHtml(job.duration)} seconds` : "Until live ends"}</dd></div>
             <div><dt>File size</dt><dd>${escapeHtml(formatBytes(job.file_size_bytes))}</dd></div>
+            ${job.fetched_at ? `<div class="wide"><dt>Retention</dt><dd>${escapeHtml(retentionNote(job))}</dd></div>` : ""}
             ${job.file_path ? `<div class="wide"><dt>File</dt><dd>${escapeHtml(job.file_path)}</dd></div>` : ""}
             ${job.error ? `<div class="wide"><dt>Error</dt><dd>${escapeHtml(job.error)}</dd></div>` : ""}
           </dl>

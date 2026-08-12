@@ -97,6 +97,9 @@ class RecordingJob(BaseModel):
     created_at: datetime = Field(default_factory=utc_now)
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
+    # Set when the user has been given the file. The sweep keys off this: an
+    # unfetched recording is never removed automatically.
+    fetched_at: Optional[datetime] = None
 
     @property
     def file_name(self) -> Optional[str]:
@@ -146,6 +149,7 @@ class RecordingJobResponse(BaseModel):
     created_at: datetime
     started_at: Optional[datetime]
     finished_at: Optional[datetime]
+    fetched_at: Optional[datetime]
 
     @classmethod
     def from_job(cls, job: RecordingJob) -> "RecordingJobResponse":
@@ -165,6 +169,7 @@ class RecordingJobResponse(BaseModel):
             created_at=job.created_at,
             started_at=job.started_at,
             finished_at=job.finished_at,
+            fetched_at=job.fetched_at,
         )
 
 

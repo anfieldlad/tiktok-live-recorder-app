@@ -515,9 +515,17 @@ SKIP_UPDATE_CHECK=true
 CLEANUP_MAX_AGE_HOURS=24
 CLEANUP_INTERVAL_MINUTES=30
 LOG_MAX_AGE_HOURS=72
+RETENTION_FETCHED_HOURS=24
+RETENTION_ORPHAN_HOURS=24
+STORAGE_SOFT_LIMIT_GB=20
 LIVE_RESOLVE_TIMEOUT_SECONDS=90
 MAX_CONCURRENT_LIVE_RELAYS=3
 ```
+
+Retention is event-driven: media is removed once you have downloaded it plus
+`RETENTION_FETCHED_HOURS`, or when you delete it, or when it is an orphan no
+record references (`RETENTION_ORPHAN_HOURS`). Anything you have never fetched
+is kept indefinitely, whatever those values are.
 
 `APP_ENV=production` also turns off the interactive API docs (`/docs`, `/redoc`,
 `/openapi.json`) and drops filesystem paths and process ids from

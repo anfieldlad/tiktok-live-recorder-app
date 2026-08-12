@@ -92,7 +92,7 @@ def download_recording(request: Request, job_id: str) -> FileResponse:
         path=file_path,
         filename=job.file_name,
         media_type="application/octet-stream",
-        background=BackgroundTask(file_service.cleanup_download_artifacts, job_id),
+        background=BackgroundTask(file_service.mark_downloaded, job_id),
     )
 
 

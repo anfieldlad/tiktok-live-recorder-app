@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field, field_validator
 
 from app.services.config import PROJECT_ROOT
@@ -90,7 +92,20 @@ def download_file(request: Request, download_id: str, file_index: int) -> FileRe
         path=file_path,
         filename=file_path.name,
         media_type="application/octet-stream",
+        background=BackgroundTask(request.app.state.download_store.mark_fetched, download_id),
     )
+
+
+@router.delete("/{download_id}")
+def delete_download(request: Request, download_id: str) -> dict[str, bool]:
+    """Remove a download and its files now, rather than waiting for the sweep."""
+    store = request.app.state.download_store
+    entry = store.get_entry(download_id)
+    if entry is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="download not found")
+    shutil.rmtree(Path(entry.output_dir), ignore_errors=True)
+    store.delete_entry(download_id)
+    return {"deleted": True}
 
 
 def _file_urls(result: PostDownloadResult) -> list[str]:

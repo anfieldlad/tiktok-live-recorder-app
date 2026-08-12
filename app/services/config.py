@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     root_path: str = ""
     jobs_file: Path = PROJECT_ROOT / "data" / "jobs.json"
     watch_jobs_file: Path = PROJECT_ROOT / "data" / "watch_jobs.json"
+    downloads_file: Path = PROJECT_ROOT / "data" / "downloads.json"
     output_dir: Path = PROJECT_ROOT / "output"
     logs_dir: Path = PROJECT_ROOT / "logs"
     recorder_dir: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder"
@@ -35,10 +36,16 @@ class Settings(BaseSettings):
     ffmpeg_bin: str = "ffmpeg"
     skip_update_check: bool = True
     # 24h, not 3: downloads and orphans are cheap to keep and expensive to lose.
-    # A short window cost a finished recording once already.
+    # A short window cost a finished recording once already. Kept as the
+    # fallback for the two retention windows below so existing .env files work.
     cleanup_max_age_hours: int = 24
+    # How long a *fetched* item lingers before the sweep removes it, and how
+    # long an unreferenced leftover survives. None means "use the fallback".
+    retention_fetched_hours: float | None = None
+    retention_orphan_hours: float | None = None
     cleanup_interval_minutes: int = 30
     log_max_age_hours: int = 72
+    storage_soft_limit_gb: float = 20
     watch_poll_interval_seconds: int = 45
     process_stop_grace_seconds: int = 12
     live_resolve_timeout_seconds: int = 90
@@ -51,6 +58,7 @@ class Settings(BaseSettings):
     def ensure_directories(self) -> None:
         self.jobs_file.parent.mkdir(parents=True, exist_ok=True)
         self.watch_jobs_file.parent.mkdir(parents=True, exist_ok=True)
+        self.downloads_file.parent.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.recorder_cookies_file.parent.mkdir(parents=True, exist_ok=True)

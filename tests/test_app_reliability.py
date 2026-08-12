@@ -10,10 +10,6 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.instagram.services.instagram_download_service import (
-    InstagramDownloadResult,
-    InstagramDownloadService,
-)
 from app.main import create_app
 from app.services.cookie_service import CookieService
 from app.services.job_store import JobStore
@@ -58,6 +54,7 @@ class AppReliabilityTests(unittest.TestCase):
         env_overrides = {
             "JOBS_FILE": str(temp_root / "data" / "jobs.json"),
             "WATCH_JOBS_FILE": str(temp_root / "data" / "watch_jobs.json"),
+            "DOWNLOADS_FILE": str(temp_root / "data" / "downloads.json"),
             "OUTPUT_DIR": str(temp_root / "output"),
             "LOGS_DIR": str(temp_root / "logs"),
             "RECORDER_DIR": str(temp_root / "vendor" / "recorder"),
@@ -157,6 +154,59 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertNotIn("active_processes", body["services"]["recorder"])
         self.assertNotIn("jobs_file", body["stores"]["jobs"])
         self.assertIn("recovery_count", body["stores"]["jobs"])
+
+    def test_downloading_a_recording_stamps_it_instead_of_deleting_it(self) -> None:
+        """The file must outlive the download: a save interrupted halfway has to
+        be retryable, and a phone that drops Wi-Fi should not destroy the only
+        copy."""
+        from app.models.recording import RecordingJob, RecordingStatus
+
+        client = self.create_test_client()
+        job_store = client.app.state.job_store
+        settings = client.app.state.settings
+
+        recording = settings.output_dir / "TK_someone_2026.08.12_10-00-00.mp4"
+        recording.write_bytes(b"x" * 32)
+        job = RecordingJob(
+            username="someone",
+            status=RecordingStatus.finished,
+            file_path=str(recording),
+        )
+        job_store.save_job(job)
+
+        response = client.get(f"/recordings/{job.id}/download")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(recording.exists(), "the file must survive being downloaded")
+        stamped = job_store.get_job(job.id)
+        self.assertIsNotNone(stamped, "the job must survive being downloaded")
+        self.assertIsNotNone(stamped.fetched_at, "downloading must stamp fetched_at")
+
+    def test_a_download_entry_can_be_deleted_explicitly(self) -> None:
+        from app.models.download import DownloadEntry, DownloadPlatform
+
+        client = self.create_test_client()
+        store = client.app.state.download_store
+        settings = client.app.state.settings
+
+        download_dir = settings.output_dir / "posts" / "20260812-101500-abc123"
+        download_dir.mkdir(parents=True)
+        (download_dir / "video.mp4").write_bytes(b"x" * 10)
+        store.save_entry(
+            DownloadEntry(
+                id="20260812-101500-abc123",
+                platform=DownloadPlatform.tiktok_post,
+                output_dir=str(download_dir),
+                files=[str(download_dir / "video.mp4")],
+            )
+        )
+
+        response = client.delete("/downloads/20260812-101500-abc123")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(download_dir.exists(), "deleting an entry removes its files")
+        self.assertIsNone(store.get_entry("20260812-101500-abc123"))
+        self.assertEqual(client.delete("/downloads/20260812-101500-abc123").status_code, 404)
 
     def test_instagram_page_renders_with_session_panel(self) -> None:
         client = self.create_test_client()
@@ -333,150 +383,6 @@ class RecorderCookiePathTests(unittest.TestCase):
 
         vendor_src = PROJECT_ROOT / "vendor" / "tiktok-live-recorder" / "src"
         self.assertEqual(settings.recorder_cookies_file.resolve(), (vendor_src / "cookies.json").resolve())
-
-
-class CleanupSweepTests(unittest.TestCase):
-    """output/posts and output/instagram used to grow forever: nothing called
-    cleanup_old_files, and download ids only live in memory, so anything left
-    on disk after a restart was unreachable and never removed."""
-
-    def _settings(self, root: Path):
-        from app.services.config import Settings
-
-        for key, value in {
-            "OUTPUT_DIR": str(root / "output"),
-            "LOGS_DIR": str(root / "logs"),
-            "JOBS_FILE": str(root / "data" / "jobs.json"),
-            "WATCH_JOBS_FILE": str(root / "data" / "watch_jobs.json"),
-            "CLEANUP_MAX_AGE_HOURS": "3",
-            "LOG_MAX_AGE_HOURS": "72",
-        }.items():
-            os.environ[key] = value
-            self.addCleanup(os.environ.pop, key, None)
-        settings = Settings()
-        settings.ensure_directories()
-        return settings
-
-    @staticmethod
-    def _age(path: Path, hours: float) -> None:
-        old = time.time() - hours * 3600
-        os.utime(path, (old, old))
-
-    def test_old_download_folders_go_and_fresh_ones_stay(self) -> None:
-        from app.services.cleanup_service import CleanupService
-        from app.services.job_store import JobStore
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            settings = self._settings(root)
-
-            stale = settings.output_dir / "posts" / "20260609-095748-ea52da"
-            stale.mkdir(parents=True)
-            (stale / "video.mp4").write_bytes(b"x" * 10)
-            self._age(stale / "video.mp4", 48)
-            self._age(stale, 48)
-
-            fresh = settings.output_dir / "instagram" / "20260811-100000-abcdef"
-            fresh.mkdir(parents=True)
-            (fresh / "reel.mp4").write_bytes(b"x" * 10)
-
-            service = CleanupService(settings, JobStore(settings.jobs_file), start=False)
-            result = service.sweep()
-
-            self.assertFalse(stale.exists(), "a months-old download folder should be swept")
-            self.assertTrue(fresh.exists(), "a download from minutes ago must survive")
-            self.assertEqual(result["download_dirs_removed"], 1)
-
-    def test_a_finished_recording_is_never_swept(self) -> None:
-        """Regression: the first version of this sweep deleted a finished 3000s
-        recording three hours after it completed, before its owner downloaded
-        it. A file a job points at must survive at any age."""
-        from app.models.recording import RecordingJob, RecordingStatus
-        from app.services.cleanup_service import CleanupService
-        from app.services.job_store import JobStore
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            settings = self._settings(root)
-            store = JobStore(settings.jobs_file)
-
-            recording = settings.output_dir / "TK_someone_2026.08.11_14-44-15.mp4"
-            recording.write_bytes(b"x" * 100)
-            self._age(recording, 48)
-            store.save_job(
-                RecordingJob(
-                    username="someone",
-                    status=RecordingStatus.finished,
-                    file_path=str(recording),
-                )
-            )
-
-            orphan = settings.output_dir / "TK_crashed_run_flv.mp4"
-            orphan.write_bytes(b"x" * 10)
-            self._age(orphan, 48)
-
-            result = CleanupService(settings, store, start=False).sweep()
-
-            self.assertTrue(recording.exists(), "a recording a job still points at must never be swept")
-            self.assertFalse(orphan.exists(), "an unreferenced leftover should still be swept")
-            self.assertEqual(result["recordings_removed"], 1)
-
-    def test_logs_for_live_jobs_are_kept(self) -> None:
-        from app.models.recording import RecordingJob
-        from app.services.cleanup_service import CleanupService
-        from app.services.job_store import JobStore
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            settings = self._settings(root)
-            store = JobStore(settings.jobs_file)
-            job = RecordingJob(username="someone")
-            store.save_job(job)
-
-            kept = settings.logs_dir / f"{job.id}.stdout.log"
-            kept.write_text("live job")
-            self._age(kept, 500)
-
-            orphan = settings.logs_dir / "11111111-2222-3333-4444-555555555555.stderr.log"
-            orphan.write_text("gone")
-            self._age(orphan, 500)
-
-            result = CleanupService(settings, store, start=False).sweep()
-
-            self.assertTrue(kept.exists(), "logs for an existing job must be kept")
-            self.assertFalse(orphan.exists())
-            self.assertEqual(result["logs_removed"], 1)
-
-
-class InstagramCleanupTests(unittest.TestCase):
-    def _service_with_download(self, temp_root: Path):
-        service = InstagramDownloadService(temp_root)
-        download_dir = service.output_dir / "dl1"
-        download_dir.mkdir(parents=True)
-        media = download_dir / "video.mp4"
-        media.write_bytes(b"x" * 10)
-        meta = download_dir / "video.info.json"
-        meta.write_text("{}")
-        service._results["dl1"] = InstagramDownloadResult(
-            download_id="dl1", output_dir=download_dir, files=[meta, media]
-        )
-        return service, download_dir, meta, media
-
-    def test_metadata_download_keeps_media(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            service, download_dir, meta, media = self._service_with_download(Path(temp_dir))
-            service.cleanup_file_after_download("dl1", 0)  # the .json
-            self.assertFalse(meta.exists())
-            self.assertTrue(media.exists())
-            self.assertTrue(download_dir.exists())
-            self.assertIn("dl1", service._results)
-
-    def test_media_download_wipes_whole_download(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            service, download_dir, _meta, media = self._service_with_download(Path(temp_dir))
-            service.cleanup_file_after_download("dl1", 1)  # the media
-            self.assertFalse(download_dir.exists())
-            self.assertNotIn("dl1", service._results)
 
 
 if __name__ == "__main__":

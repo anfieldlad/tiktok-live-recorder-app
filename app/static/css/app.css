@@ -742,3 +742,5 @@ input:focus, textarea:focus {
 
   /* Session steps already 1-col from 820px rule */
 }
+
+.footer-item.warn { color: var(--danger, #b3261e); font-weight: 600; }
