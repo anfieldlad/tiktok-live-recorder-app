@@ -34,7 +34,9 @@ class Settings(BaseSettings):
     recorder_bitrate: str | None = None
     ffmpeg_bin: str = "ffmpeg"
     skip_update_check: bool = True
-    cleanup_max_age_hours: int = 3
+    # 24h, not 3: downloads and orphans are cheap to keep and expensive to lose.
+    # A short window cost a finished recording once already.
+    cleanup_max_age_hours: int = 24
     cleanup_interval_minutes: int = 30
     log_max_age_hours: int = 72
     watch_poll_interval_seconds: int = 45
