@@ -54,6 +54,7 @@ class AppReliabilityTests(unittest.TestCase):
         env_overrides = {
             "JOBS_FILE": str(temp_root / "data" / "jobs.json"),
             "WATCH_JOBS_FILE": str(temp_root / "data" / "watch_jobs.json"),
+            "DOWNLOADS_FILE": str(temp_root / "data" / "downloads.json"),
             "OUTPUT_DIR": str(temp_root / "output"),
             "LOGS_DIR": str(temp_root / "logs"),
             "RECORDER_DIR": str(temp_root / "vendor" / "recorder"),
@@ -153,6 +154,59 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertNotIn("active_processes", body["services"]["recorder"])
         self.assertNotIn("jobs_file", body["stores"]["jobs"])
         self.assertIn("recovery_count", body["stores"]["jobs"])
+
+    def test_downloading_a_recording_stamps_it_instead_of_deleting_it(self) -> None:
+        """The file must outlive the download: a save interrupted halfway has to
+        be retryable, and a phone that drops Wi-Fi should not destroy the only
+        copy."""
+        from app.models.recording import RecordingJob, RecordingStatus
+
+        client = self.create_test_client()
+        job_store = client.app.state.job_store
+        settings = client.app.state.settings
+
+        recording = settings.output_dir / "TK_someone_2026.08.12_10-00-00.mp4"
+        recording.write_bytes(b"x" * 32)
+        job = RecordingJob(
+            username="someone",
+            status=RecordingStatus.finished,
+            file_path=str(recording),
+        )
+        job_store.save_job(job)
+
+        response = client.get(f"/recordings/{job.id}/download")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(recording.exists(), "the file must survive being downloaded")
+        stamped = job_store.get_job(job.id)
+        self.assertIsNotNone(stamped, "the job must survive being downloaded")
+        self.assertIsNotNone(stamped.fetched_at, "downloading must stamp fetched_at")
+
+    def test_a_download_entry_can_be_deleted_explicitly(self) -> None:
+        from app.models.download import DownloadEntry, DownloadPlatform
+
+        client = self.create_test_client()
+        store = client.app.state.download_store
+        settings = client.app.state.settings
+
+        download_dir = settings.output_dir / "posts" / "20260812-101500-abc123"
+        download_dir.mkdir(parents=True)
+        (download_dir / "video.mp4").write_bytes(b"x" * 10)
+        store.save_entry(
+            DownloadEntry(
+                id="20260812-101500-abc123",
+                platform=DownloadPlatform.tiktok_post,
+                output_dir=str(download_dir),
+                files=[str(download_dir / "video.mp4")],
+            )
+        )
+
+        response = client.delete("/downloads/20260812-101500-abc123")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(download_dir.exists(), "deleting an entry removes its files")
+        self.assertIsNone(store.get_entry("20260812-101500-abc123"))
+        self.assertEqual(client.delete("/downloads/20260812-101500-abc123").status_code, 404)
 
     def test_instagram_page_renders_with_session_panel(self) -> None:
         client = self.create_test_client()

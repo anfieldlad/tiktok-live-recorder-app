@@ -91,18 +91,18 @@ class FileService:
             raise FileNotFoundError("recording file does not exist")
         return file_path
 
-    def cleanup_download_artifacts(self, job_id: str) -> None:
-        job = self.job_store.get_job(job_id)
-        if not job:
-            return
-        try:
-            if job.file_path:
-                file_path = Path(job.file_path)
-                if file_path.exists():
-                    file_path.unlink()
-                    logger.info("Deleted recording file after download", extra={"job_id": job_id})
-        finally:
-            self.job_store.delete_job(job_id)
+    def mark_downloaded(self, job_id: str) -> None:
+        """Record that the user has been given this recording.
+
+        Deleting here is what used to happen, and it meant an interrupted save
+        destroyed the only copy. The sweep removes it once the grace period is
+        up; until then a retry works.
+        """
+        self.job_store.update_job(
+            job_id,
+            lambda current: current.model_copy(update={"fetched_at": utc_now()}),
+        )
+        logger.info("Recording marked as downloaded", extra={"job_id": job_id})
 
     def cleanup_old_files(self, max_age_hours: int) -> list[str]:
         cutoff = utc_now() - timedelta(hours=max_age_hours)
