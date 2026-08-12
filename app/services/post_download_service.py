@@ -48,11 +48,23 @@ _ERROR_TRANSLATIONS = (
 )
 
 
+# Any yt-dlp error that ends by asking the reader to open an issue is aimed at
+# a yt-dlp maintainer, not at someone who pasted a link. Matching the exact
+# wording is futile — the same dead post produced two different phrasings an
+# hour apart — so the referral itself is the signal.
+_BUG_REPORT_MARKERS = ("github.com/yt-dlp", "please report this issue", "yt-dlp -U")
+
+
 def friendly_download_error(raw_error: str) -> str:
     """Translate the errors we have actually seen; pass anything else through."""
     for needle, replacement in _ERROR_TRANSLATIONS:
         if needle in raw_error:
             return replacement
+    if any(marker in raw_error for marker in _BUG_REPORT_MARKERS):
+        return (
+            "TikTok did not return this post. It is probably no longer available — "
+            "deleted, private, or region-locked."
+        )
     return raw_error
 
 

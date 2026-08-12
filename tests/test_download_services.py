@@ -58,6 +58,22 @@ class DownloadErrorTests(unittest.TestCase):
         self.assertNotIn("github.com", message)
         self.assertIn("no longer available", message)
 
+    def test_the_other_wording_yt_dlp_uses_for_the_same_dead_post(self) -> None:
+        """Matching exact phrases is whack-a-mole: the same dead post produced
+        "Unexpected response from webpage request" one hour and "Unable to
+        extract universal data for rehydration" the next."""
+        raw = (
+            "ERROR: [TikTok] 7430349171061804293: Unable to extract universal data for rehydration; "
+            "please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the "
+            "appropriate issue template. Confirm you are on the latest version using  yt-dlp -U"
+        )
+
+        message = friendly_download_error(raw)
+
+        self.assertNotIn("github.com", message)
+        self.assertNotIn("yt-dlp -U", message)
+        self.assertIn("no longer available", message)
+
     def test_an_unknown_error_is_passed_through_unchanged(self) -> None:
         raw = "ERROR: something nobody has seen before"
 
