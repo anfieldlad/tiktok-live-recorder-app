@@ -27,6 +27,7 @@ from app.services.job_store import JobStore
 from app.services.live_status_service import LiveStatusService
 from app.services.post_download_service import PostDownloadService
 from app.services.recorder_service import RecorderService
+from app.services.retention import RetentionPolicy
 from app.services.watch_service import WatchService
 from app.services.watch_store import WatchStore
 
@@ -55,7 +56,8 @@ def create_app() -> FastAPI:
     instagram_download_service = InstagramDownloadService(
         settings.output_dir, instagram_cookie_service, download_store
     )
-    cleanup_service = CleanupService(settings, job_store)
+    retention_policy = RetentionPolicy.from_settings(settings)
+    cleanup_service = CleanupService(settings, job_store, download_store, retention_policy)
     watch_service = WatchService(
         watch_store,
         job_store,
