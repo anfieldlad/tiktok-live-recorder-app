@@ -42,3 +42,23 @@ function formatDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
+
+async function refreshStorageNote() {
+  const el = document.getElementById("storage-note");
+  if (!el) return;
+  try {
+    const response = await fetch(appPath("/health/details"));
+    if (!response.ok) return;
+    const { storage } = await response.json();
+    if (!storage) return;
+    // "0.0 GB used" tells you nothing; drop to MB below a gigabyte.
+    const size = (bytes) =>
+      bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`;
+    el.textContent = `Storage: ${size(storage.used_bytes)} used, ${size(storage.free_bytes)} free`;
+    el.className = storage.over_soft_limit ? "footer-item warn" : "footer-item";
+  } catch {
+    // The footer is decoration; a failed poll must never surface as an error.
+  }
+}
+
+document.addEventListener("DOMContentLoaded", refreshStorageNote);
