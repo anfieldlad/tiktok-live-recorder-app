@@ -387,6 +387,40 @@ class CleanupSweepTests(unittest.TestCase):
             self.assertTrue(fresh.exists(), "a download from minutes ago must survive")
             self.assertEqual(result["download_dirs_removed"], 1)
 
+    def test_a_finished_recording_is_never_swept(self) -> None:
+        """Regression: the first version of this sweep deleted a finished 3000s
+        recording three hours after it completed, before its owner downloaded
+        it. A file a job points at must survive at any age."""
+        from app.models.recording import RecordingJob, RecordingStatus
+        from app.services.cleanup_service import CleanupService
+        from app.services.job_store import JobStore
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            settings = self._settings(root)
+            store = JobStore(settings.jobs_file)
+
+            recording = settings.output_dir / "TK_someone_2026.08.11_14-44-15.mp4"
+            recording.write_bytes(b"x" * 100)
+            self._age(recording, 48)
+            store.save_job(
+                RecordingJob(
+                    username="someone",
+                    status=RecordingStatus.finished,
+                    file_path=str(recording),
+                )
+            )
+
+            orphan = settings.output_dir / "TK_crashed_run_flv.mp4"
+            orphan.write_bytes(b"x" * 10)
+            self._age(orphan, 48)
+
+            result = CleanupService(settings, store, start=False).sweep()
+
+            self.assertTrue(recording.exists(), "a recording a job still points at must never be swept")
+            self.assertFalse(orphan.exists(), "an unreferenced leftover should still be swept")
+            self.assertEqual(result["recordings_removed"], 1)
+
     def test_logs_for_live_jobs_are_kept(self) -> None:
         from app.models.recording import RecordingJob
         from app.services.cleanup_service import CleanupService

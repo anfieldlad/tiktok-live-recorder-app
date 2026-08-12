@@ -6,9 +6,13 @@ cleaned themselves up on download. Download ids also live only in memory, so
 every restart orphans whatever was left on disk — those folders are unreachable
 through the API and pure dead weight.
 
-The sweep is deliberately conservative: it only removes things older than the
-configured age, so an in-progress recording (whose file is being appended to)
-and a download the user is about to fetch are never touched.
+Age alone is not a safe test, which the first version of this learned the hard
+way: it deleted a finished 3000-second recording three hours after it completed,
+before its owner downloaded it. A recording belongs to its job and lives until
+the job is downloaded or deleted, so anything a job still points at is skipped
+here no matter how old it is. What remains sweepable is genuinely unreachable:
+orphaned files from crashed runs, per-download folders whose ids died with the
+process that held them in memory, and logs for jobs that no longer exist.
 """
 
 from __future__ import annotations
@@ -82,16 +86,41 @@ class CleanupService:
         return (utc_now() - timedelta(hours=hours)).timestamp()
 
     def _sweep_recordings(self) -> int:
-        """Loose recording files the download flow never claimed."""
+        """Loose recording files that no job claims.
+
+        A file a job still points at is never swept, at any age. The app's
+        contract is that a recording survives until it is downloaded (the
+        download deletes it) or the job is deleted — sweeping by age alone
+        destroyed a finished 3000s recording before its owner fetched it.
+        Only orphans are removed: leftovers from crashed or interrupted runs
+        that no job references and nothing can serve.
+        """
         cutoff = self._cutoff(self.settings.cleanup_max_age_hours)
+        claimed = self._claimed_files()
         removed = 0
         for path in self.settings.output_dir.glob("*"):
             if not path.is_file():
+                continue
+            if str(path.resolve()) in claimed:
                 continue
             if path.stat().st_mtime < cutoff:
                 path.unlink(missing_ok=True)
                 removed += 1
         return removed
+
+    def _claimed_files(self) -> set[str]:
+        """Absolute paths any known job refers to, whatever its status."""
+        try:
+            jobs = self.job_store.list_jobs()
+        except Exception:
+            # If the store cannot be read, assume everything is claimed rather
+            # than risk deleting a recording somebody is waiting for.
+            return {str(path.resolve()) for path in self.settings.output_dir.glob("*")}
+        return {
+            str(Path(job.file_path).resolve())
+            for job in jobs
+            if job.file_path
+        }
 
     def _sweep_download_dirs(self) -> int:
         """Per-download folders under output/posts and output/instagram.
