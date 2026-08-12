@@ -16,7 +16,7 @@
   --filed:#3f6b4a; --pending:#8a6a1f; --failed:#8f2c22;
   --shadow-card:0 1px 0 rgba(255,255,255,.9) inset, 0 14px 28px rgba(34,29,23,.13), 0 2px 4px rgba(34,29,23,.07);
 }
-body[data-series="ig"]{ --ink-2:#2f4a7f; }   /* series IG — process blue */
+[data-series="ig"]{ --ink-2:#2f4a7f; }   /* an Instagram entry prints in the second ink */
 
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0}
@@ -45,12 +45,9 @@ body::before{
 .title{font:600 25px/1 Fraunces;font-variation-settings:"opsz" 144,"SOFT" 40;letter-spacing:-.015em}
 .estd{margin-left:auto;font:400 10px/1 Cutive Mono;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
 .masthead .session{padding:0;margin-left:14px;padding-left:14px;border-left:1px solid var(--rule)}
-.tabs{display:flex;gap:26px;margin-top:16px;align-items:flex-end;flex-wrap:wrap}
-.group{display:flex;align-items:flex-end;gap:0}
-.group-label{font:400 9px/1 Cutive Mono;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
-             padding:8px 10px 8px 0;border-right:1px solid var(--rule);margin-right:10px;white-space:nowrap}
-.group[data-series="tt"] .group-label{color:#a8342a}
-.group[data-series="ig"] .group-label{color:#2f4a7f}
+.tabs{display:flex;gap:0;margin-top:16px;align-items:flex-end;flex-wrap:wrap}
+.tabs-note{margin-left:auto;font:400 9px/1 Cutive Mono;letter-spacing:.12em;color:var(--dim);
+           text-transform:uppercase;padding:8px 0;white-space:nowrap}
 .tab{font:400 10px/1 Cutive Mono;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
      padding:8px 12px;border:1px solid transparent;border-bottom:none;text-decoration:none;position:relative;top:1px}
 .tab[aria-current]{color:var(--ink);background:var(--card);border-color:var(--rule);box-shadow:0 -2px 0 var(--ink-2) inset}
@@ -58,7 +55,7 @@ body::before{
 .tabs .spacer{flex:1}
 .session{font:400 10px/1 Cutive Mono;letter-spacing:.12em;color:var(--filed);padding:8px 0;white-space:nowrap}
 .session::before{content:"● ";}
-@media (max-width:620px){ .tabs{gap:8px} .group{width:100%} }
+@media (max-width:620px){ .tabs-note{margin-left:0;width:100%;padding-top:0} }
 
 /* ---------- sheet (the form) ---------- */
 .sheet{background:var(--card);border:1px solid var(--card-edge);box-shadow:var(--shadow-card);
@@ -86,7 +83,7 @@ h1{font:300 40px/1.02 Fraunces;font-variation-settings:"opsz" 144,"SOFT" 30;lett
 .filed-head .rule{flex:1;height:1px;background:var(--rule)}
 .card{background:var(--card);border:1px solid var(--card-edge);box-shadow:var(--shadow-card);
       padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden}
-.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rule)}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ink-2);opacity:.55}
 .card.live::before{background:var(--ink-2);animation:inkpulse 2.4s ease-in-out infinite}
 @keyframes inkpulse{0%,100%{opacity:1}50%{opacity:.35}}
 .card-top{display:flex;align-items:flex-start;gap:14px}
@@ -127,27 +124,21 @@ footer .sp{margin-left:auto}
 }
 </style>
 </head>
-<body data-series="tt">
+<body>
 <div class="wrap">
 
   <header class="masthead rise">
     <div class="line1">
       <span class="mark"></span>
       <span class="title">Still Here</span>
-      <span class="estd">Series TT</span>
+      <span class="estd">A register of things broadcast once</span>
       <span class="session">Session valid</span>
     </div>
     <nav class="tabs">
-      <span class="group" data-series="tt">
-        <span class="group-label">TikTok</span>
-        <a class="tab" href="#" aria-current="page">Record live</a>
-        <a class="tab" href="#">Auto-record</a>
-        <a class="tab" href="#">Save post</a>
-      </span>
-      <span class="group" data-series="ig">
-        <span class="group-label">Instagram</span>
-        <a class="tab" href="#">Save post</a>
-      </span>
+      <a class="tab" href="#" aria-current="page">Record live</a>
+      <a class="tab" href="#">Auto-record</a>
+      <a class="tab" href="#">Save post</a>
+      <span class="tabs-note">Live recording · TikTok only</span>
     </nav>
   </header>
 
@@ -194,11 +185,11 @@ footer .sp{margin-left:auto}
     <div class="card-actions"><button class="btn btn-sm btn-quiet">Stop</button></div>
   </article>
 
-  <article class="card rise d4">
+  <article class="card rise d4" data-series="ig">
     <div class="card-top">
       <div>
-        <div class="no">No. 0417 · 12 Aug 2026, 10:44</div>
-        <h3 class="subject">eliyasari.99</h3>
+        <div class="no">No. 0417 · 12 Aug 2026, 10:44 · Instagram</div>
+        <h3 class="subject">usa___news6</h3>
       </div>
       <span class="stamp">Filed</span>
     </div>
