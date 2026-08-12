@@ -23,6 +23,49 @@ from app.services.url_guard import ensure_public_http_url, validate_tiktok_url
 # how much of the disk one post can consume.
 MAX_MEDIA_BYTES = 1024 * 1024 * 1024
 
+# yt-dlp reports a post TikTok will not serve as "Unexpected response from
+# webpage request" and then asks the user to open an issue on its tracker.
+# Someone who pasted a link to a deleted video should not be told to file a bug.
+_ERROR_TRANSLATIONS = (
+    (
+        "Unexpected response from webpage request",
+        "TikTok did not return this post. It is probably no longer available — "
+        "deleted, private, or region-locked.",
+    ),
+    (
+        "Video currently unavailable",
+        "This post is no longer available on TikTok.",
+    ),
+    (
+        "This post is unavailable",
+        "This post is no longer available on TikTok.",
+    ),
+    (
+        "Unsupported URL",
+        "TikTok serves this post in a format the downloader cannot read, and the "
+        "fallback could not fetch it either.",
+    ),
+)
+
+
+def friendly_download_error(raw_error: str) -> str:
+    """Translate the errors we have actually seen; pass anything else through."""
+    for needle, replacement in _ERROR_TRANSLATIONS:
+        if needle in raw_error:
+            return replacement
+    return raw_error
+
+
+def should_try_fallback(raw_error: str) -> bool:
+    """Whether a yt-dlp failure is worth one attempt at the metadata fallback.
+
+    Previously only "Unsupported URL" and 403 qualified, which meant a post
+    tikwm could serve was refused whenever yt-dlp failed for some other reason.
+    A single extra request is cheap; the only failures not worth retrying are
+    the ones we raised ourselves before yt-dlp ever ran.
+    """
+    return raw_error.strip().lower().startswith("error")
+
 
 @dataclass(frozen=True)
 class PostDownloadResult:
@@ -107,11 +150,11 @@ class PostDownloadService:
                 cookie_file.unlink(missing_ok=True)
         if result.returncode != 0:
             download_error = self._format_download_error(result.stderr)
-            if "Unsupported URL" in download_error or "HTTP Error 403" in download_error:
+            if should_try_fallback(download_error):
                 fallback_result = self._download_with_metadata_fallback(normalized_url, download_id, download_dir)
                 if fallback_result is not None:
                     return self.remember(fallback_result)
-            raise RuntimeError(download_error)
+            raise RuntimeError(friendly_download_error(download_error))
 
         files = sorted(path for path in download_dir.rglob("*") if path.is_file())
         if not files:
