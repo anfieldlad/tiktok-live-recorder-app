@@ -28,6 +28,7 @@ from app.services.live_status_service import LiveStatusService
 from app.services.post_download_service import PostDownloadService
 from app.services.recorder_service import RecorderService
 from app.services.retention import RetentionPolicy
+from app.services.storage_report import storage_report
 from app.services.watch_service import WatchService
 from app.services.watch_store import WatchStore
 
@@ -209,7 +210,9 @@ def create_app() -> FastAPI:
             "stores": {
                 "jobs": job_store.diagnostics(),
                 "watch_jobs": watch_store.diagnostics(),
+                "downloads": download_store.diagnostics(),
             },
+            "storage": storage_report(settings.output_dir, retention_policy.storage_soft_limit_bytes),
         })
 
     return app
