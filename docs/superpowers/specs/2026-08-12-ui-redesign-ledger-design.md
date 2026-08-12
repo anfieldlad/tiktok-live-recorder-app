@@ -71,10 +71,12 @@ unported rules degrade rather than break.
 body[data-app="instagram"]{ --ink-2:#2f4a7f; }   /* series ink — process blue */
 ```
 
-**Two series, one press.** Instagram is not a theme, it is a second ink. Only
-`--ink-2` changes, and it drives the margin rule, the brand mark, the active
-tab underline and focus rings. The stock, type and layout are identical. This
-replaces the current approach of swapping accents and hue-rotating the logo.
+**Two series, one press.** Instagram is not a theme, it is a second ink. Since
+the save page now serves both platforms, the ink belongs to the *entry* rather
+than the page: a card carries `data-series="ig"` and prints its margin rule and
+stamp in process blue, while TikTok entries stay oxblood. The masthead keeps the
+house ink. This is more honest than the old approach of repainting the whole
+app, and it survives a page that lists both platforms at once.
 
 ## Background
 
@@ -84,6 +86,51 @@ Three layers, no decorative gradients:
 2. A radial wash from `--board-2` to `--board`, plus a top shadow for depth.
 3. Paper grain: an inline SVG `feTurbulence` data URI at `opacity:.5`,
    `mix-blend-mode:multiply`, `position:fixed`, `pointer-events:none`.
+
+## Information architecture
+
+The old IA had two apps with a switcher, and three action tabs that never said
+which platform they belonged to. Someone could reasonably expect to record an
+Instagram live. A first attempt at grouping the tabs by platform failed review
+for a concrete reason: the nav read `Save post · Instagram · Save post`, and a
+label sitting between two identical items binds to neither.
+
+The duplicate is the disease, so it goes:
+
+```
+Record live · Auto-record · Save post            Live recording · TikTok only
+```
+
+- **Record live** and **Auto-record** are TikTok-only, stated in the corner of
+  the nav and again in each page's eyebrow.
+- **Save post** takes a TikTok *or* Instagram link and routes on hostname, the
+  same rule the backend validators and the Android `UrlRouter` already use.
+  `download.html` and `instagram_download.html` merge into one page.
+
+There is no longer a "current platform". Platform becomes a property of an
+entry, not a mode the user is in.
+
+### Routes
+
+| Route | Before | After |
+|---|---|---|
+| `/` | record | unchanged |
+| `/watch` | auto-record | unchanged |
+| `/download` | TikTok posts | **both platforms** |
+| `/instagram` | Instagram posts | **302 → `/download`**, so old links and bookmarks still work |
+
+No API route, payload, or status code changes. This is the hard constraint of
+the whole redesign: `POST /downloads`, `POST /instagram/downloads`, both
+`/auth/*` pairs, `/recordings/*` and `/live/stream` keep their exact contracts,
+because the Android client calls all of them and must not need a release.
+
+### Sessions
+
+With no platform mode, one drawer holds both sessions as two sections — TikTok
+and Instagram — each with its own status and existing controls. The masthead
+shows both states (`● TikTok  ● Instagram`); clicking either opens the drawer at
+that section. This replaces two per-platform panels that could never be seen
+together, and it is where a user goes when a private post is refused.
 
 ## Structure
 
@@ -104,8 +151,7 @@ Per page, only the sheet's contents differ:
 |---|---|---|
 | `record.html` | source + duration, Begin capture | recording jobs |
 | `watch.html` | source + duration, File under auto-record | watch jobs |
-| `download.html` | post URL, Save post | download result |
-| `instagram_download.html` | post URL, Save post | download result + zip |
+| `download.html` | one URL field, Save post — accepts either platform | download result; Instagram results also offer the zip |
 
 The session panel (`_session_panel.html`, `_ig_session_panel.html`) becomes a
 drawer opened from the masthead's session state, keeping its current ids and
@@ -183,13 +229,17 @@ Visual, because that is what changed:
 3. Card states exercised with seeded data: recording, filed, failed, empty,
    and a fetched card showing its retention line.
 4. `prefers-reduced-motion` emulated — nothing animates.
-5. The existing Python suite must stay green. One test asserts on rendered
-   markup, so the redesign has two literal obligations:
-   `test_instagram_page_renders_with_session_panel` requires the string
-   **"Instagram session"** to appear on `/instagram`, and a link whose href is
-   exactly **`/instagram`**. Rewording that heading or turning the link into a
-   button breaks the suite — change the test deliberately if the copy must
-   change, rather than discovering it in CI.
+5. `test_instagram_page_renders_with_session_panel` asserts that `/instagram`
+   returns 200 containing "Instagram session" and `href="/instagram"`. Under
+   this design `/instagram` becomes a redirect, so that test **must be rewritten
+   deliberately**: assert the 302 to `/download`, and assert the merged page
+   contains the Instagram session section. Do not delete it — it is the only
+   test that touches rendered markup.
+6. Replay the Android client's exact requests against the running app after the
+   change — `/auth/status`, `/instagram/auth/status`, `/recordings/check-live`,
+   `POST /downloads`, `POST /instagram/downloads`, a file fetch — and confirm
+   every response still parses into its Kotlin model. The mobile app must not
+   need a release.
 
 ## Decisions taken
 
