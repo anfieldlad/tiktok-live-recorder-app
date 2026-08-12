@@ -13,6 +13,18 @@ The present UI is competent and anonymous: Inter loaded from Google Fonts, a
 two-column split panel, cards on a warm background, accent colour swapped per
 platform. It looks like every other self-hosted dashboard.
 
+## Name
+
+**Still Here.** The live ended, the post came down — it's still here. Two
+ordinary words that say why the app exists rather than what it technically
+does, and they cover both platforms, which "TikTok Media Saver" never did.
+
+An earlier candidate, "The Ephemera Register", was dropped for a good reason: a
+name that needs explaining is a bad name.
+
+Where it appears: the masthead title, the `<title>` of every page, and the
+footer. Nothing else — no route, id, or class carries the product name.
+
 ## Concept
 
 **A register of things that were broadcast once.** The app captures live
@@ -101,8 +113,8 @@ behaviour.
 
 ## Components
 
-- **masthead** — brand mark (ring + dot in series ink), title in Fraunces,
-  `Series TT · Est. 2026`, index tabs (file-folder tabs, active tab sits on the
+- **masthead** — brand mark (ring + dot in series ink), title `Still Here`
+  in Fraunces, `Series TT · Est. 2026`, index tabs (file-folder tabs, active tab sits on the
   card stock with an inset series-ink underline), session state at far right.
 - **sheet** — the form. Card stock, 3px series-ink margin rule on the left,
   eyebrow in Cutive Mono, `h1` in Fraunces, lede in Newsreader.
@@ -191,8 +203,9 @@ Visual, because that is what changed:
 ## Out of scope
 
 - Any behaviour, route, payload or feature change.
-- Renaming the app. The mockup showed "The Ephemera Register" and it fits the
-  concept, but the spec keeps **TikTok Media Saver** because the rename was not
-  agreed. It is one string in `base.html` plus the `<title>`, changeable later.
+- Renaming anything below the surface. The product name changes to **Still
+  Here** (see Name), but routes, ids, class names, the systemd unit, the repo
+  and the `/tiktok` mount point all keep their current names. Renaming those is
+  a separate job with deployment consequences.
 - The Android client, which shares nothing with these templates.
 - Dark mode.
