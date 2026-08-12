@@ -37,8 +37,10 @@ things. Stamps because status in a paper system is a stamp. A retention line
 that reads "Taken at 13:07 — the register clears it in 22h" because that is
 what the retention model actually does, said in the register's voice.
 
-Reference mockup, built and reviewed before this spec:
-`scratchpad/directions/ledger.html` (not committed — the spec is the record).
+Reference mockup, built and reviewed before this spec, and committed because
+prose is a poor substitute for looking at it — open it in a browser:
+`docs/superpowers/mockups/ledger.html`. The nav alternatives that were weighed
+and rejected are in `docs/superpowers/mockups/nav-options.html`.
 
 ## Typography
 
