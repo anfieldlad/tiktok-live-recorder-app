@@ -13,6 +13,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from app.instagram.services.instagram_cookie_service import InstagramCookieService
+from app.models.download import DownloadEntry, DownloadPlatform
+from app.services.download_store import DownloadStore
 
 
 logger = logging.getLogger(__name__)
@@ -26,11 +28,32 @@ class InstagramDownloadResult:
 
 
 class InstagramDownloadService:
-    def __init__(self, output_dir: Path, cookie_service: InstagramCookieService | None = None) -> None:
+    def __init__(
+        self,
+        output_dir: Path,
+        cookie_service: InstagramCookieService | None = None,
+        download_store: DownloadStore | None = None,
+    ) -> None:
         self.output_dir = output_dir / "instagram"
         self.cookie_service = cookie_service
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.download_store = download_store
         self._results: dict[str, InstagramDownloadResult] = {}
+
+    def remember(self, result: InstagramDownloadResult) -> InstagramDownloadResult:
+        """Record a completed download so it can be served and, later, swept."""
+        if self.download_store is not None:
+            self.download_store.save_entry(
+                DownloadEntry(
+                    id=result.download_id,
+                    platform=DownloadPlatform.instagram,
+                    output_dir=str(result.output_dir),
+                    files=[str(path) for path in result.files],
+                )
+            )
+        else:
+            self._results[result.download_id] = result
+        return result
 
     def validate_url(self, url: str) -> str:
         normalized = url.strip()
@@ -70,9 +93,9 @@ class InstagramDownloadService:
             if cookie_file:
                 cookie_file.unlink(missing_ok=True)
 
-        download_result = InstagramDownloadResult(download_id=download_id, output_dir=download_dir, files=files)
-        self._results[download_id] = download_result
-        return download_result
+        return self.remember(
+            InstagramDownloadResult(download_id=download_id, output_dir=download_dir, files=files)
+        )
 
     def _engine_order(self, url: str):
         if self._is_reel(url):
@@ -84,7 +107,16 @@ class InstagramDownloadService:
         return "/reel/" in path or "/reels/" in path
 
     def get_result(self, download_id: str) -> InstagramDownloadResult | None:
-        return self._results.get(download_id)
+        if self.download_store is None:
+            return self._results.get(download_id)
+        entry = self.download_store.get_entry(download_id)
+        if entry is None:
+            return None
+        return InstagramDownloadResult(
+            download_id=entry.id,
+            output_dir=Path(entry.output_dir),
+            files=[Path(path) for path in entry.files],
+        )
 
     def resolve_file(self, download_id: str, file_index: int) -> Path:
         result = self.get_result(download_id)
@@ -100,32 +132,6 @@ class InstagramDownloadService:
         if not resolved_file.is_file() or not resolved_file.is_relative_to(resolved_output_dir):
             raise FileNotFoundError("download file does not exist")
         return resolved_file
-
-    def cleanup_file_after_download(self, download_id: str, file_index: int) -> None:
-        """Delete a downloaded file after it is served, and wipe the whole
-        download once all media is gone (mirrors the TikTok recording flow).
-        Leftover metadata (.json) is swept along with the last media file."""
-        result = self._results.get(download_id)
-        if result is None:
-            return
-        try:
-            file_path = result.files[file_index]
-        except IndexError:
-            return
-
-        resolved_output_dir = result.output_dir.resolve()
-        try:
-            resolved_file = file_path.resolve()
-            if resolved_file.is_file() and resolved_file.is_relative_to(resolved_output_dir):
-                resolved_file.unlink(missing_ok=True)
-                logger.info("Deleted Instagram file after download", extra={"download_id": download_id, "file_index": file_index})
-        finally:
-            remaining = [path for path in result.output_dir.rglob("*") if path.is_file()]
-            media_remaining = [path for path in remaining if path.suffix.lower() != ".json"]
-            if not media_remaining:
-                shutil.rmtree(result.output_dir, ignore_errors=True)
-                self._results.pop(download_id, None)
-                logger.info("Wiped Instagram download after all media downloaded", extra={"download_id": download_id})
 
     def _run_gallery_dl(self, url: str, download_dir: Path, cookie_file: Path | None) -> str | None:
         command = [
@@ -215,15 +221,6 @@ class InstagramDownloadService:
             for path in media_files:
                 archive.write(path, arcname=path.name)
         return archive_path
-
-    def cleanup_after_archive(self, download_id: str, archive_path: Path) -> None:
-        """Delete the temp zip and wipe the whole download once it has been
-        served, matching the per-file cleanup behaviour."""
-        archive_path.unlink(missing_ok=True)
-        result = self._results.pop(download_id, None)
-        if result is not None:
-            shutil.rmtree(result.output_dir, ignore_errors=True)
-            logger.info("Wiped Instagram download after archive download", extra={"download_id": download_id})
 
     def _new_download_id(self) -> str:
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")

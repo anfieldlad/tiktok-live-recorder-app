@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     root_path: str = ""
     jobs_file: Path = PROJECT_ROOT / "data" / "jobs.json"
     watch_jobs_file: Path = PROJECT_ROOT / "data" / "watch_jobs.json"
+    downloads_file: Path = PROJECT_ROOT / "data" / "downloads.json"
     output_dir: Path = PROJECT_ROOT / "output"
     logs_dir: Path = PROJECT_ROOT / "logs"
     recorder_dir: Path = PROJECT_ROOT / "vendor" / "tiktok-live-recorder"
@@ -57,6 +58,7 @@ class Settings(BaseSettings):
     def ensure_directories(self) -> None:
         self.jobs_file.parent.mkdir(parents=True, exist_ok=True)
         self.watch_jobs_file.parent.mkdir(parents=True, exist_ok=True)
+        self.downloads_file.parent.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.recorder_cookies_file.parent.mkdir(parents=True, exist_ok=True)

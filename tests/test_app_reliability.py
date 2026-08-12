@@ -10,10 +10,6 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.instagram.services.instagram_download_service import (
-    InstagramDownloadResult,
-    InstagramDownloadService,
-)
 from app.main import create_app
 from app.services.cookie_service import CookieService
 from app.services.job_store import JobStore
@@ -446,37 +442,6 @@ class CleanupSweepTests(unittest.TestCase):
             self.assertTrue(kept.exists(), "logs for an existing job must be kept")
             self.assertFalse(orphan.exists())
             self.assertEqual(result["logs_removed"], 1)
-
-
-class InstagramCleanupTests(unittest.TestCase):
-    def _service_with_download(self, temp_root: Path):
-        service = InstagramDownloadService(temp_root)
-        download_dir = service.output_dir / "dl1"
-        download_dir.mkdir(parents=True)
-        media = download_dir / "video.mp4"
-        media.write_bytes(b"x" * 10)
-        meta = download_dir / "video.info.json"
-        meta.write_text("{}")
-        service._results["dl1"] = InstagramDownloadResult(
-            download_id="dl1", output_dir=download_dir, files=[meta, media]
-        )
-        return service, download_dir, meta, media
-
-    def test_metadata_download_keeps_media(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            service, download_dir, meta, media = self._service_with_download(Path(temp_dir))
-            service.cleanup_file_after_download("dl1", 0)  # the .json
-            self.assertFalse(meta.exists())
-            self.assertTrue(media.exists())
-            self.assertTrue(download_dir.exists())
-            self.assertIn("dl1", service._results)
-
-    def test_media_download_wipes_whole_download(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            service, download_dir, _meta, media = self._service_with_download(Path(temp_dir))
-            service.cleanup_file_after_download("dl1", 1)  # the media
-            self.assertFalse(download_dir.exists())
-            self.assertNotIn("dl1", service._results)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ from app.services.browser_login_service import BrowserLoginService
 from app.services.cleanup_service import CleanupService
 from app.services.config import PROJECT_ROOT, get_settings
 from app.services.cookie_service import CookieService
+from app.services.download_store import DownloadStore
 from app.services.file_service import FileService
 from app.services.job_store import JobStore
 from app.services.live_status_service import LiveStatusService
@@ -47,10 +48,13 @@ def create_app() -> FastAPI:
     browser_login_service = BrowserLoginService(settings.jobs_file.parents[1], cookie_service)
     live_status_service = LiveStatusService(settings, cookie_service)
     recorder_service = RecorderService(settings, job_store, file_service)
-    post_download_service = PostDownloadService(settings.output_dir, cookie_service)
+    download_store = DownloadStore(settings.downloads_file)
+    post_download_service = PostDownloadService(settings.output_dir, cookie_service, download_store)
     instagram_cookie_service = InstagramCookieService(settings.instagram_cookies_file)
     instagram_browser_login_service = InstagramBrowserLoginService(settings.jobs_file.parents[1], instagram_cookie_service)
-    instagram_download_service = InstagramDownloadService(settings.output_dir, instagram_cookie_service)
+    instagram_download_service = InstagramDownloadService(
+        settings.output_dir, instagram_cookie_service, download_store
+    )
     cleanup_service = CleanupService(settings, job_store)
     watch_service = WatchService(
         watch_store,
@@ -87,6 +91,7 @@ def create_app() -> FastAPI:
     app.state.instagram_browser_login_service = instagram_browser_login_service
     app.state.instagram_download_service = instagram_download_service
     app.state.watch_service = watch_service
+    app.state.download_store = download_store
     app.state.cleanup_service = cleanup_service
     app.state.templates = templates
 

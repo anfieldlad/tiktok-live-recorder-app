@@ -12,7 +12,9 @@ from urllib.parse import urlparse
 
 from curl_cffi import requests
 
+from app.models.download import DownloadEntry, DownloadPlatform
 from app.services.cookie_service import CookieService
+from app.services.download_store import DownloadStore
 from app.services.secure_files import write_private_temp_text
 from app.services.url_guard import ensure_public_http_url, validate_tiktok_url
 
@@ -30,11 +32,35 @@ class PostDownloadResult:
 
 
 class PostDownloadService:
-    def __init__(self, output_dir: Path, cookie_service: CookieService | None = None) -> None:
+    def __init__(
+        self,
+        output_dir: Path,
+        cookie_service: CookieService | None = None,
+        download_store: DownloadStore | None = None,
+    ) -> None:
         self.output_dir = output_dir / "posts"
         self.cookie_service = cookie_service
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.download_store = download_store
+        # Fallback for callers that construct the service without a store
+        # (older tests). A restart still loses these, which is exactly the
+        # problem the store exists to solve.
         self._results: dict[str, PostDownloadResult] = {}
+
+    def remember(self, result: PostDownloadResult) -> PostDownloadResult:
+        """Record a completed download so it can be served and, later, swept."""
+        if self.download_store is not None:
+            self.download_store.save_entry(
+                DownloadEntry(
+                    id=result.download_id,
+                    platform=DownloadPlatform.tiktok_post,
+                    output_dir=str(result.output_dir),
+                    files=[str(path) for path in result.files],
+                )
+            )
+        else:
+            self._results[result.download_id] = result
+        return result
 
     def validate_url(self, url: str) -> str:
         return validate_tiktok_url(url, label="download URL")
@@ -84,8 +110,7 @@ class PostDownloadService:
             if "Unsupported URL" in download_error or "HTTP Error 403" in download_error:
                 fallback_result = self._download_with_metadata_fallback(normalized_url, download_id, download_dir)
                 if fallback_result is not None:
-                    self._results[download_id] = fallback_result
-                    return fallback_result
+                    return self.remember(fallback_result)
             raise RuntimeError(download_error)
 
         files = sorted(path for path in download_dir.rglob("*") if path.is_file())
@@ -93,11 +118,19 @@ class PostDownloadService:
             raise RuntimeError("download finished but no output files were created")
 
         download_result = PostDownloadResult(download_id=download_id, output_dir=download_dir, files=files)
-        self._results[download_id] = download_result
-        return download_result
+        return self.remember(download_result)
 
     def get_result(self, download_id: str) -> PostDownloadResult | None:
-        return self._results.get(download_id)
+        if self.download_store is None:
+            return self._results.get(download_id)
+        entry = self.download_store.get_entry(download_id)
+        if entry is None:
+            return None
+        return PostDownloadResult(
+            download_id=entry.id,
+            output_dir=Path(entry.output_dir),
+            files=[Path(path) for path in entry.files],
+        )
 
     def resolve_file(self, download_id: str, file_index: int) -> Path:
         result = self.get_result(download_id)
