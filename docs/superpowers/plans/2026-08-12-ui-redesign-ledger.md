@@ -4,7 +4,7 @@
 
 **Goal:** Re-dress the web UI as a paper register called *Still Here*, and merge the two "save post" pages into one that routes by hostname — without changing a single API contract.
 
-**Architecture:** A new token layer and three serif faces replace the current Inter-based CSS. Templates move from a two-column split to one centred column of cards. `download.html` absorbs `instagram_download.html`; `/instagram` becomes a redirect. The two session panels become one drawer with two sections. All 44 element ids survive, so event wiring is untouched.
+**Architecture:** A new token layer and three serif faces replace the current Inter-based CSS. Templates move from a two-column split to one centred column of cards. `download.html` absorbs `instagram_download.html`; `/instagram` becomes a redirect. The two session panels become one drawer with two sections. Every element id survives except the six that belong to the deleted Instagram page, so event wiring is otherwise untouched.
 
 **Tech Stack:** Jinja2 templates, vanilla JS (no framework, no build step), hand-written CSS, Google Fonts.
 
