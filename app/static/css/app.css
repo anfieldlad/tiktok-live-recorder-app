@@ -1,56 +1,36 @@
 /* ==========================================================================
-   TikTok Media Saver — UI tokens, primitives, and components
+   Still Here — a paper register. Tokens, primitives, and components.
    ========================================================================== */
 
-:root {
-  /* Surfaces */
-  --bg: #f5f0e6;
-  --bg-soft: #faf6ec;
-  --surface: #ffffff;
-  --surface-soft: rgba(255, 252, 246, 0.78);
-  --surface-sunken: rgba(22, 21, 18, 0.04);
+:root{
+  /* paper */
+  --board:#ded6c4; --board-2:#e6dfd0;
+  --card:#fbf8f0; --card-edge:#efe8da;
 
-  /* Ink */
-  --ink: #1a1814;
-  --ink-soft: #3c3730;
-  --muted: #6b6459;
-  --muted-soft: #8b8479;
+  /* ink */
+  --ink:#221d17; --ink-soft:#4a4238; --dim:#7d7365;
+  --muted:#7d7365;              /* kept: older rules still reference it */
+  --rule:#cec4ad; --rule-soft:#e0d8c6;
+  --line:#cec4ad; --line-strong:#b9ad92;
 
-  /* Lines */
-  --line: rgba(22, 21, 18, 0.10);
-  --line-strong: rgba(22, 21, 18, 0.18);
+  /* series ink — the house ink is oxblood */
+  --ink-2:#a8342a;
 
-  /* Accents */
-  --accent: #c2532f;
-  --accent-ink: #fffaf3;
-  --accent-soft: rgba(194, 83, 47, 0.12);
-  --accent2: #0f6258;
-  --accent2-soft: rgba(15, 98, 88, 0.12);
+  /* stamps */
+  --filed:#3f6b4a; --pending:#8a6a1f; --failed:#8f2c22;
+  --danger:#8f2c22; --success:#3f6b4a; --warn:#8a6a1f;
 
-  /* Status */
-  --danger: #b8392f;
-  --danger-soft: rgba(184, 57, 47, 0.12);
-  --warn: #95661a;
-  --warn-soft: rgba(149, 102, 26, 0.14);
-  --success: #0f6258;
-  --success-soft: rgba(15, 98, 88, 0.14);
+  /* faces */
+  --font-display:"Fraunces",Georgia,serif;
+  --font-ui:"Newsreader",Georgia,serif;
+  --font-mono:"Cutive Mono",ui-monospace,monospace;
 
-  /* Effects */
-  --shadow-sm: 0 1px 2px rgba(22, 21, 18, 0.04);
-  --shadow-md: 0 1px 2px rgba(22, 21, 18, 0.04), 0 10px 30px rgba(22, 21, 18, 0.06);
-  --shadow-lg: 0 1px 2px rgba(22, 21, 18, 0.04), 0 24px 60px rgba(22, 21, 18, 0.10);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-pill: 999px;
-  --motion: 160ms cubic-bezier(.2, .8, .2, 1);
-
-  /* Typography */
-  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: Georgia, "Iowan Old Style", "Times New Roman", serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --shadow-card:0 1px 0 rgba(255,255,255,.9) inset, 0 14px 28px rgba(34,29,23,.13), 0 2px 4px rgba(34,29,23,.07);
+  --radius-sm:0; --radius-md:0; --radius-lg:0;
 }
+
+/* An entry from the Instagram series prints in the second ink. */
+[data-series="ig"]{ --ink-2:#2f4a7f; }
 
 /* ==========================================================================
    Reset / base
@@ -58,42 +38,34 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
-body {
-  margin: 0;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--ink);
+body{
+  margin:0;
   background:
-    radial-gradient(1100px 600px at -10% -20%, rgba(194, 83, 47, 0.10), transparent 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(15, 98, 88, 0.08), transparent 60%),
-    linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
-  background-attachment: fixed;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+    linear-gradient(180deg, rgba(34,29,23,.06), transparent 22%),
+    repeating-linear-gradient(180deg, transparent 0 31px, var(--rule-soft) 31px 32px),
+    radial-gradient(120% 70% at 50% 0%, var(--board-2), var(--board));
+  color:var(--ink);
+  font:400 15px/1.6 var(--font-ui);
+  min-height:100vh;
 }
+/* paper grain — fixed so it does not scroll with content */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  opacity:.5; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.32'/></svg>");
+}
+.wrap{max-width:660px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
 
-/* Instagram sister-app theme: same components, distinct identity.
-   Overriding the accent tokens re-skins buttons, focus rings, the page
-   eyebrow, step badges, and the session chip without touching markup. */
-body[data-app="instagram"] {
-  --accent: #c13584;
-  --accent-ink: #fff5fb;
-  --accent-soft: rgba(193, 53, 132, 0.12);
-  --accent2: #6a3de8;
-  --accent2-soft: rgba(106, 61, 232, 0.12);
-  background:
-    radial-gradient(1100px 600px at -10% -20%, rgba(214, 41, 118, 0.12), transparent 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(106, 61, 232, 0.12), transparent 60%),
-    linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
-  background-attachment: fixed;
-}
-body[data-app="instagram"] .btn-primary:hover { background: #a82d72; }
-body[data-app="instagram"] .brand-mark {
-  filter: hue-rotate(265deg) saturate(1.25);
-}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:400;color:var(--ink);margin:0}
 
-h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; color: var(--ink); margin: 0; }
+/* one orchestrated load */
+.rise{opacity:0;transform:translateY(12px);animation:rise .6s cubic-bezier(.2,.7,.25,1) forwards}
+.d1{animation-delay:.10s}.d2{animation-delay:.18s}.d3{animation-delay:.26s}.d4{animation-delay:.34s}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .rise{animation:none;opacity:1;transform:none}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
 h1 { font-size: clamp(1.9rem, 1.2rem + 2.2vw, 2.7rem); line-height: 1.05; letter-spacing: -0.01em; }
 h2 { font-size: 1.15rem; line-height: 1.25; }
 h3 { font-size: 1rem; line-height: 1.3; }
