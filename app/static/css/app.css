@@ -716,3 +716,35 @@ input:focus, textarea:focus {
 }
 
 .footer-item.warn { color: var(--danger, #b3261e); font-weight: 600; }
+
+/* ==========================================================================
+   Masthead, nav, footer
+   ========================================================================== */
+
+.masthead{border-bottom:1.5px solid var(--ink);margin:26px 0;padding-bottom:0}
+.masthead-line{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.mark{width:26px;height:26px;border:1.5px solid var(--ink-2);border-radius:50%;position:relative;flex:none}
+.mark::after{content:"";position:absolute;inset:6px;background:var(--ink-2);border-radius:50%}
+.title{font-family:var(--font-display);font-variation-settings:"opsz" 144,"SOFT" 40;font-weight:600;
+       font-size:25px;line-height:1;letter-spacing:-.015em}
+.estd{font:400 10px/1 var(--font-mono);letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+.session-state{margin-left:auto;background:none;border:0;cursor:pointer;padding:4px 0;
+               font:400 10px/1 var(--font-mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.session-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--filed);margin-right:7px}
+.session-dot.is-off{background:var(--pending)}
+.tabs{display:flex;align-items:flex-end;gap:0;margin-top:14px;flex-wrap:wrap}
+.tab{font:400 10px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+     padding:9px 13px;text-decoration:none;position:relative;top:1px;border:1px solid transparent;border-bottom:none}
+.tab:hover{color:var(--ink)}
+.tab.is-active{color:var(--ink);background:var(--card);border-color:var(--rule);box-shadow:0 -2px 0 var(--ink-2) inset}
+.tabs-note{margin-left:auto;font:400 9px/1 var(--font-mono);letter-spacing:.12em;color:var(--dim);
+           text-transform:uppercase;padding:9px 0}
+.footer{max-width:660px;margin:40px auto 30px;padding:14px 20px 0;border-top:1px solid var(--rule);
+        display:flex;gap:18px;flex-wrap:wrap;font:400 10px/1.6 var(--font-mono);letter-spacing:.1em;
+        color:var(--dim);text-transform:uppercase}
+.footer a{color:var(--dim)}
+.footer .sp{margin-left:auto}
+.footer-item.warn{color:var(--failed);font-weight:400}
+:focus-visible{outline:2px solid var(--ink-2);outline-offset:2px}
+@media (max-width:620px){ .tabs-note{margin-left:0;width:100%;padding-top:0} }
