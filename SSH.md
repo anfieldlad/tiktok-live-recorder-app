@@ -124,9 +124,9 @@ Key variables:
 | `LOGS_DIR` | Recorder log files |
 | `RECORDER_DIR` | Path to upstream tiktok-live-recorder clone |
 | `PYTHON_BIN` | Python binary inside recorder's own venv |
-| `ROOT_PATH` | FastAPI subpath prefix (e.g. `/tiktok`) — affects routing |
+| `ROOT_PATH` | FastAPI subpath prefix — currently `/stillhere`; affects routing |
 
-`ROOT_PATH` tells FastAPI the subpath it is mounted under. This affects routing — see the nginx section below.
+`ROOT_PATH` tells FastAPI the subpath it is mounted under. This affects routing — see the nginx section below. It is the **canonical** prefix: every link, redirect and asset URL the app generates is built from it, so it must match the canonical `location` block exactly.
 
 ---
 
@@ -134,18 +134,40 @@ Key variables:
 
 **Config file:** `/etc/nginx/sites-enabled/`
 
+The app answers on **two** prefixes. `/stillhere/` is canonical; `/tiktok/` is a
+compatibility shim for the Android client — see [Retiring `/tiktok`](#retiring-tiktok).
+
 ```nginx
 server {
     server_name <domain>;
 
-    # Redirect bare /tiktok to /tiktok/
+    # nginx listens on 8443 behind sslh, so absolute redirects were built as
+    # https://<domain>:8443/... — a port ufw blocks, which broke every bare
+    # URL without a trailing slash. Emit relative Location headers instead.
+    absolute_redirect off;
+
+    # --- canonical mount: matches ROOT_PATH=/stillhere ---
+    location = /stillhere {
+        return 301 /stillhere/;
+    }
+
+    location /stillhere/ {
+        proxy_pass http://127.0.0.1:8000;   # no trailing slash — passes full URI to uvicorn
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # --- compatibility shim: the Android client ships /tiktok/ base URLs ---
     location = /tiktok {
         return 301 /tiktok/;
     }
 
-    # Proxy all /tiktok/ traffic to uvicorn
     location /tiktok/ {
-        proxy_pass http://127.0.0.1:8000;   # no trailing slash — passes full URI to uvicorn
+        proxy_pass http://127.0.0.1:8000/stillhere/;   # WITH a path — swaps the prefix upstream
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;
@@ -159,12 +181,26 @@ server {
 }
 ```
 
-### Critical: proxy_pass must NOT have a trailing slash
+### Critical: the canonical block's proxy_pass must NOT have a trailing slash
 
-`proxy_pass http://127.0.0.1:8000;` — **no trailing slash**.
+`proxy_pass http://127.0.0.1:8000;` — **no trailing slash**, for `/stillhere/`.
 
-- **With** trailing slash (`proxy_pass http://127.0.0.1:8000/;`): nginx strips `/tiktok/` before forwarding. Uvicorn receives `/static/css/app.css` → 404, because FastAPI (Starlette 0.47+) routes on the full path including the `ROOT_PATH` prefix.
-- **Without** trailing slash (`proxy_pass http://127.0.0.1:8000;`): nginx forwards the full URI `/tiktok/static/css/app.css`. FastAPI receives it, matches `ROOT_PATH=/tiktok`, and serves correctly.
+- **With** a trailing slash (`proxy_pass http://127.0.0.1:8000/;`): nginx strips `/stillhere/` before forwarding. Uvicorn receives `/static/css/app.css` → 404, because FastAPI (Starlette 0.47+) routes on the full path including the `ROOT_PATH` prefix.
+- **Without** a trailing slash: nginx forwards the full URI `/stillhere/static/css/app.css`. FastAPI receives it, matches `ROOT_PATH=/stillhere`, and serves correctly.
+
+The `/tiktok/` shim inverts this deliberately. `proxy_pass http://127.0.0.1:8000/stillhere/;`
+carries a path, so nginx **replaces** the matched `/tiktok/` prefix with `/stillhere/`
+before forwarding. The app therefore only ever sees one prefix and needs no
+multi-mount awareness. Payloads are unaffected: `file_urls` are returned without
+any root prefix (`/downloads/{id}/files/0`), and each client prepends its own base.
+
+### Retiring `/tiktok`
+
+The shim exists only because the Android client hardcodes `/tiktok/` base URLs and
+cannot be repointed without a release. Once a rebuilt client shipping `/stillhere/`
+is rolled out and old installs are drained, delete both `/tiktok` blocks above and
+reload nginx. Nothing else references the prefix — the app, its links and its
+payloads are already fully on `/stillhere`.
 
 ### Common nginx commands
 
