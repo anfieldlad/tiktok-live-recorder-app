@@ -792,6 +792,10 @@ input:focus, textarea:focus {
 .job-card{background:var(--card);border:1px solid var(--card-edge);box-shadow:var(--shadow-card);
           padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden}
 .job-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rule)}
+/* An entry that belongs to a series keeps its ink after it is filed, so a
+   saved Instagram post still reads as Instagram. The stamp stays semantic:
+   green filed, amber pending, red failed, on both platforms. */
+.job-card[data-series]::before{background:var(--ink-2)}
 .job-card.live::before{background:var(--ink-2);animation:inkpulse 2.4s ease-in-out infinite}
 @keyframes inkpulse{0%,100%{opacity:1}50%{opacity:.35}}
 .job-header{display:flex;align-items:flex-start;gap:14px}
@@ -820,3 +824,14 @@ input:focus, textarea:focus {
 .empty span{font:400 14px/1.5 var(--font-ui);color:var(--dim)}
 .elapsed-counter{font:400 12px/1 var(--font-mono);color:var(--dim);margin-left:8px}
 @media (max-width:620px){ .job-stats{grid-template-columns:repeat(2,1fr)} }
+
+/* ==========================================================================
+   File rows on a filed download
+   ========================================================================== */
+
+.file-list{margin-top:14px;border-top:1px solid var(--rule)}
+.file-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px dashed var(--rule)}
+.file-meta{min-width:0}
+.file-name{display:block;font:400 14px/1.3 var(--font-mono);overflow-wrap:anywhere}
+.file-path{display:block;font:400 10px/1.4 var(--font-mono);color:var(--dim);overflow-wrap:anywhere}
+.file-row .btn{margin-left:auto;flex:none}

@@ -1,48 +1,29 @@
 {% extends "base.html" %}
 
-{% block hero_eyebrow %}Video & photo posts{% endblock %}
-{% block page_title %}Save post{% endblock %}
-{% block hero_description %}Save a public TikTok video or picture post from a URL. Downloads run one at a time and return local file links when finished.{% endblock %}
-
 {% block page_content %}
-<section class="layout layout-split">
-  <aside class="surface">
-    <div class="card-head">
-      <h2>Download post</h2>
-      <p>Paste a public TikTok video or picture post URL. Short share links such as <code>vt.tiktok.com</code> are supported.</p>
-    </div>
-    <form id="post-download-form" class="form">
-      <div class="field">
-        <label for="post-url">TikTok post URL</label>
-        <input id="post-url" type="url" placeholder="https://www.tiktok.com/@user/video/...">
-      </div>
-      <div class="row">
-        <button class="btn btn-primary" type="submit" id="download-post-button">Download</button>
-        <button class="btn btn-ghost" type="button" id="clear-post-download-form">Clear</button>
-      </div>
-    </form>
-    <div id="post-download-notice" class="notice">Enter a public TikTok post URL, then click Download.</div>
-  </aside>
+<section class="sheet rise d1">
+  <div class="eyebrow">Entry — saved post</div>
+  <h1>Save a post<br>before it’s gone</h1>
+  <p class="lede">Paste a TikTok or Instagram link. The register works out which is which and files the media here until you take it.</p>
 
-  <section class="surface">
-    <div class="card-head split">
-      <div>
-        <h2>Downloaded files</h2>
-        <p>Files from the latest completed post download appear here.</p>
-      </div>
+  <form id="post-download-form" class="form">
+    <div class="field">
+      <label for="post-url">Link — TikTok or Instagram</label>
+      <input id="post-url" type="text" placeholder="https://www.tiktok.com/@… or https://www.instagram.com/p/…">
     </div>
-    <div id="post-download-result" class="jobs">
-      <div class="empty">
-        <span class="empty-icon">↓</span>
-        <span class="empty-title">No post downloaded yet</span>
-        <span>Paste a TikTok post URL on the left to get started.</span>
-      </div>
+    <div class="row">
+      <button class="btn" type="submit" id="download-post-button">Save post</button>
+      <button class="btn btn-quiet" type="button" id="clear-post-download-form">Clear</button>
     </div>
-  </section>
+  </form>
+  <div id="post-download-notice" class="notice">Paste a link and the register will do the rest.</div>
 </section>
+
+<div class="filed-head rise d2"><h2>Filed</h2><span class="rule"></span></div>
+<div id="post-download-result" class="rise d3"></div>
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/download-page.js?v=4' }}"></script>
-<script>initDownloadPage();</script>
+<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=1' }}"></script>
+<script>initSavePage();</script>
 {% endblock %}

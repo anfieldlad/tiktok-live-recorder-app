@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -146,9 +146,11 @@ def create_app() -> FastAPI:
     def download_page(request: Request) -> HTMLResponse:
         return render_dashboard(request, "download.html", "download")
 
-    @app.get("/instagram", response_class=HTMLResponse)
-    def instagram_page(request: Request) -> HTMLResponse:
-        return render_dashboard(request, "instagram_download.html", "instagram", platform="instagram")
+    @app.get("/instagram")
+    def instagram_page() -> RedirectResponse:
+        """Kept so old links and bookmarks still work. Saving a post is one
+        page now; it picks the platform from the URL you paste."""
+        return RedirectResponse(url=f"{settings.root_path.rstrip('/')}/download")
 
     @app.api_route("/favicon.svg", methods=["GET", "HEAD"])
     def favicon_svg() -> FileResponse:

@@ -208,16 +208,24 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertIsNone(store.get_entry("20260812-101500-abc123"))
         self.assertEqual(client.delete("/downloads/20260812-101500-abc123").status_code, 404)
 
-    def test_instagram_page_renders_with_session_panel(self) -> None:
+    def test_instagram_url_redirects_to_the_shared_save_page(self) -> None:
+        """/instagram was its own page; it is now one Save post page for both
+        platforms. Old links must still land somewhere useful."""
         client = self.create_test_client()
 
-        response = client.get("/instagram")
+        response = client.get("/instagram", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers["location"], "/download")
+
+    def test_save_page_serves_both_platforms(self) -> None:
+        client = self.create_test_client()
+
+        response = client.get("/download")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Instagram session", response.text)
-        # The nav no longer links to /instagram by name: one Save post tab
-        # covers both platforms, and it is the active one here.
-        self.assertIn('class="tab is-active" href="/download"', response.text)
+        self.assertIn("Save post", response.text)
+        self.assertIn("TikTok or Instagram", response.text)
 
     def test_instagram_download_rejects_non_instagram_url(self) -> None:
         client = self.create_test_client()
