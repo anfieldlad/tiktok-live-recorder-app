@@ -25,7 +25,7 @@ function initRecordPage() {
     if (source) params.set("source", source);
     if (duration) params.set("duration", duration);
     const href = `${appPath("/watch")}${params.toString() ? `?${params.toString()}` : ""}`;
-    recordHelperActions.innerHTML = `<a class="btn btn-secondary" href="${href}">Switch to Auto-record →</a>`;
+    recordHelperActions.innerHTML = `<a class="btn btn-quiet" href="${href}">Switch to Auto-record →</a>`;
   }
 
   function formatBytes(value) {
@@ -93,13 +93,13 @@ function initRecordPage() {
       const phase = job.progress;
       const liveClass = isLivePhase(phase) ? " live" : "";
       return `
-        <article class="job-card">
+        <article class="job-card${liveClass}">
           <header class="job-header">
             <div>
+              <span class="job-id">No. ${escapeHtml(job.id.slice(0, 4).toUpperCase())} · ${escapeHtml(formatDate(job.created_at))}</span>
               <h3 class="job-title">${escapeHtml(job.username || job.url || "-")}</h3>
-              <span class="job-id">${escapeHtml(job.id)}</span>
             </div>
-            <span class="status-pill ${badgeClass(phase)}${liveClass}">${escapeHtml(humanizePhase(phase))}</span>
+            <span class="stamp ${badgeClass(phase)}">${escapeHtml(humanizePhase(phase))}</span>
           </header>
           ${job.progress_message ? `<p class="job-message">${escapeHtml(job.progress_message)}</p>` : ""}
           <dl class="job-stats">
@@ -108,10 +108,10 @@ function initRecordPage() {
             <div><dt>Finished</dt><dd>${escapeHtml(formatDate(job.finished_at))}</dd></div>
             <div><dt>Duration</dt><dd>${job.duration ? `${escapeHtml(job.duration)} seconds` : "Until live ends"}</dd></div>
             <div><dt>File size</dt><dd>${escapeHtml(formatBytes(job.file_size_bytes))}</dd></div>
-            ${job.fetched_at ? `<div class="wide"><dt>Retention</dt><dd>${escapeHtml(retentionNote(job))}</dd></div>` : ""}
             ${job.file_path ? `<div class="wide"><dt>File</dt><dd>${escapeHtml(job.file_path)}</dd></div>` : ""}
             ${job.error ? `<div class="wide"><dt>Error</dt><dd>${escapeHtml(job.error)}</dd></div>` : ""}
           </dl>
+          ${job.fetched_at ? `<p class="retention">${escapeHtml(retentionNote(job))}</p>` : ""}
           <footer class="job-actions">${buildRecordingActions(job)}</footer>
         </article>`;
     }).join("");
@@ -194,7 +194,7 @@ function initRecordPage() {
 
   function setAutoRefresh(enabled) {
     autoRefreshEnabled = enabled;
-    autoRefreshButton.textContent = `Auto-refresh: ${enabled ? "On" : "Off"}`;
+    autoRefreshButton.textContent = `Auto: ${enabled ? "on" : "off"}`;
     autoRefreshButton.setAttribute("aria-pressed", String(enabled));
     if (refreshTimer) window.clearInterval(refreshTimer);
     refreshTimer = enabled ? window.setInterval(() => pollOnce(fetchRecordings), 5000) : null;

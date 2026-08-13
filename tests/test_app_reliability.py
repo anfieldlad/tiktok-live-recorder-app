@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 import threading
 import time
@@ -208,14 +209,46 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertIsNone(store.get_entry("20260812-101500-abc123"))
         self.assertEqual(client.delete("/downloads/20260812-101500-abc123").status_code, 404)
 
-    def test_instagram_page_renders_with_session_panel(self) -> None:
+    def test_instagram_url_redirects_to_the_shared_save_page(self) -> None:
+        """/instagram was its own page; it is now one Save post page for both
+        platforms. Old links must still land somewhere useful."""
         client = self.create_test_client()
 
-        response = client.get("/instagram")
+        response = client.get("/instagram", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers["location"], "/download")
+
+    def test_save_page_serves_both_platforms_and_both_sessions(self) -> None:
+        client = self.create_test_client()
+
+        response = client.get("/download")
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("Save post", response.text)
+        self.assertIn("TikTok or Instagram", response.text)
         self.assertIn("Instagram session", response.text)
-        self.assertIn('href="/instagram"', response.text)
+        self.assertIn("TikTok session", response.text)
+
+    def test_every_page_carries_both_session_sections(self) -> None:
+        """The drawer is in the shared chrome, so a session can be fixed from
+        wherever you happen to be — not only from that platform's page."""
+        client = self.create_test_client()
+
+        for path in ("/", "/watch", "/download"):
+            with self.subTest(path=path):
+                text = client.get(path).text
+                self.assertIn("TikTok session", text)
+                self.assertIn("Instagram session", text)
+
+    def test_the_two_session_sections_do_not_share_element_ids(self) -> None:
+        """Both panels once used identical ids. On one page that makes
+        getElementById hand the Instagram script the TikTok controls."""
+        client = self.create_test_client()
+
+        ids = re.findall(r'id="([^"]+)"', client.get("/download").text)
+
+        self.assertEqual(sorted(ids), sorted(set(ids)), "duplicate element ids on the page")
 
     def test_instagram_download_rejects_non_instagram_url(self) -> None:
         client = self.create_test_client()

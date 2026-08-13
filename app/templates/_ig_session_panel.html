@@ -1,63 +1,60 @@
-<section class="session-drawer" id="session-drawer" aria-hidden="true">
-  <div class="session-drawer-inner">
-    <div class="session-drawer-head">
-      <div>
-        <h2>Instagram session</h2>
-        <p class="muted">Needed for stories, highlights, and most Instagram content, which require you to be signed in.</p>
-      </div>
-      <button class="btn btn-ghost btn-icon" type="button" id="session-close" aria-label="Close session panel">×</button>
-    </div>
+{# Ids here are prefixed ig- because this panel now shares a page with the
+   TikTok one. Both panels used to carry identical ids, which was safe only
+   while a page could show one of them; getElementById would otherwise hand
+   this panel's script the TikTok panel's controls. #}
+<section class="session-section">
+  <h3>Instagram session</h3>
+  <p class="muted">Needed for stories, highlights, and most Instagram content, which require you to be signed in.</p>
 
-    <div class="steps {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}">
-      <div class="step">
-        <span class="step-num">1</span>
-        <div class="step-body">
-          <h3>Open a login browser</h3>
-          <p>Open a clean Chrome or Edge window for Instagram sign-in.</p>
-          <div class="row">
-            <button class="btn btn-primary" type="button" id="login-chrome">Open Chrome</button>
-            <button class="btn btn-secondary" type="button" id="login-edge">Open Edge</button>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <span class="step-num">2</span>
-        <div class="step-body">
-          <h3>Sign in, then close it</h3>
-          <p>Finish the Instagram sign-in flow, then close that window so the session can be saved safely.</p>
-          <div class="row">
-            <button class="btn btn-danger" type="button" id="close-login">Close login browser</button>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <span class="step-num">3</span>
-        <div class="step-body">
-          <h3>Capture the session</h3>
-          <p>Save the signed-in Instagram session for stories, highlights, and private posts.</p>
-          <div class="row">
-            <button class="btn btn-primary" type="button" id="capture-login">Capture session</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="session-notice" class="notice">{% if cookies_configured %}Your Instagram session is ready.{% else %}No Instagram session is saved yet.{% endif %}</div>
-
-    <details class="session-advanced">
-      <summary>{{ "Advanced session options" if browser_login_status.browser_launch_supported else "Session options" }}</summary>
-      <form id="cookies-form" class="form">
-        <div class="field">
-          <label for="session-id">sessionid</label>
-          <input id="session-id" type="text" placeholder="Paste sessionid here">
-        </div>
+  <div class="steps {{ '' if ig_browser_login_status.browser_launch_supported else 'is-hidden' }}">
+    <div class="step">
+      <span class="step-num">1</span>
+      <div class="step-body">
+        <h3>Open a login browser</h3>
+        <p>Open a clean Chrome or Edge window for Instagram sign-in.</p>
         <div class="row">
-          <button class="btn btn-primary" type="submit">Save manually</button>
-          <button class="btn btn-secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-chrome">Import Chrome</button>
-          <button class="btn btn-secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-edge">Import Edge</button>
-          <button class="btn btn-danger" type="button" id="clear-cookies">Clear session</button>
+          <button class="btn btn-sm" type="button" id="ig-login-chrome">Open Chrome</button>
+          <button class="btn btn-sm btn-quiet" type="button" id="ig-login-edge">Open Edge</button>
         </div>
-      </form>
-    </details>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <div class="step-body">
+        <h3>Sign in, then close it</h3>
+        <p>Finish the Instagram sign-in flow, then close that window so the session can be saved safely.</p>
+        <div class="row">
+          <button class="btn btn-sm btn-danger" type="button" id="ig-close-login">Close login browser</button>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <div class="step-body">
+        <h3>Capture the session</h3>
+        <p>Save the signed-in Instagram session for stories, highlights, and private posts.</p>
+        <div class="row">
+          <button class="btn btn-sm" type="button" id="ig-capture-login">Capture session</button>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <div id="ig-session-notice" class="notice">{% if ig_cookies_configured %}Your Instagram session is ready.{% else %}No Instagram session is saved yet.{% endif %}</div>
+
+  <details class="session-advanced">
+    <summary>{{ "Advanced session options" if ig_browser_login_status.browser_launch_supported else "Session options" }}</summary>
+    <form id="ig-cookies-form" class="form">
+      <div class="field">
+        <label for="ig-session-id">sessionid</label>
+        <input id="ig-session-id" type="text" placeholder="Paste sessionid here">
+      </div>
+      <div class="row">
+        <button class="btn btn-sm" type="submit">Save manually</button>
+        <button class="btn btn-sm btn-quiet {{ '' if ig_browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="ig-import-chrome">Import Chrome</button>
+        <button class="btn btn-sm btn-quiet {{ '' if ig_browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="ig-import-edge">Import Edge</button>
+        <button class="btn btn-sm btn-danger" type="button" id="ig-clear-cookies">Clear session</button>
+      </div>
+    </form>
+  </details>
 </section>

@@ -55,7 +55,9 @@ async function refreshStorageNote() {
     const size = (bytes) =>
       bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`;
     el.textContent = `Storage: ${size(storage.used_bytes)} used, ${size(storage.free_bytes)} free`;
-    el.className = storage.over_soft_limit ? "footer-item warn" : "footer-item";
+    // Keep .sp: it is what pushes the storage figure to the end of the footer
+    // rule. Writing className wholesale used to drop it on the first poll.
+    el.className = storage.over_soft_limit ? "sp footer-item warn" : "sp footer-item";
   } catch {
     // The footer is decoration; a failed poll must never surface as an error.
   }

@@ -1,63 +1,56 @@
-<section class="session-drawer" id="session-drawer" aria-hidden="true">
-  <div class="session-drawer-inner">
-    <div class="session-drawer-head">
-      <div>
-        <h2>TikTok session</h2>
-        <p class="muted">Only needed when a private or restricted live requires your TikTok session.</p>
-      </div>
-      <button class="btn btn-ghost btn-icon" type="button" id="session-close" aria-label="Close session panel">×</button>
-    </div>
+<section class="session-section">
+  <h3>TikTok session</h3>
+  <p class="muted">Only needed when a private or restricted live requires your TikTok session.</p>
 
-    <div class="steps {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}">
-      <div class="step">
-        <span class="step-num">1</span>
-        <div class="step-body">
-          <h3>Open a login browser</h3>
-          <p>Open a clean Chrome or Edge window for TikTok sign-in.</p>
-          <div class="row">
-            <button class="btn btn-primary" type="button" id="login-chrome">Open Chrome</button>
-            <button class="btn btn-secondary" type="button" id="login-edge">Open Edge</button>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <span class="step-num">2</span>
-        <div class="step-body">
-          <h3>Sign in, then close it</h3>
-          <p>Finish the TikTok sign-in flow, then close that window so the session can be saved safely.</p>
-          <div class="row">
-            <button class="btn btn-danger" type="button" id="close-login">Close login browser</button>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <span class="step-num">3</span>
-        <div class="step-body">
-          <h3>Capture the session</h3>
-          <p>Save the signed-in TikTok session for private or follower-only lives.</p>
-          <div class="row">
-            <button class="btn btn-primary" type="button" id="capture-login">Capture session</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
-
-    <details class="session-advanced">
-      <summary>{{ "Advanced session options" if browser_login_status.browser_launch_supported else "Session options" }}</summary>
-      <form id="cookies-form" class="form">
-        <div class="field">
-          <label for="session-ss">session_ss</label>
-          <input id="session-ss" type="text" placeholder="Paste session_ss here">
-        </div>
+  <div class="steps {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}">
+    <div class="step">
+      <span class="step-num">1</span>
+      <div class="step-body">
+        <h3>Open a login browser</h3>
+        <p>Open a clean Chrome or Edge window for TikTok sign-in.</p>
         <div class="row">
-          <button class="btn btn-primary" type="submit">Save manually</button>
-          <button class="btn btn-secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-chrome">Import Chrome</button>
-          <button class="btn btn-secondary {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-edge">Import Edge</button>
-          <button class="btn btn-danger" type="button" id="clear-cookies">Clear session</button>
+          <button class="btn btn-sm" type="button" id="login-chrome">Open Chrome</button>
+          <button class="btn btn-sm btn-quiet" type="button" id="login-edge">Open Edge</button>
         </div>
-      </form>
-    </details>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <div class="step-body">
+        <h3>Sign in, then close it</h3>
+        <p>Finish the TikTok sign-in flow, then close that window so the session can be saved safely.</p>
+        <div class="row">
+          <button class="btn btn-sm btn-danger" type="button" id="close-login">Close login browser</button>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <div class="step-body">
+        <h3>Capture the session</h3>
+        <p>Save the signed-in TikTok session for private or follower-only lives.</p>
+        <div class="row">
+          <button class="btn btn-sm" type="button" id="capture-login">Capture session</button>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <div id="session-notice" class="notice">{% if cookies_configured %}Your TikTok session is ready.{% else %}No TikTok session is saved yet.{% endif %}</div>
+
+  <details class="session-advanced">
+    <summary>{{ "Advanced session options" if browser_login_status.browser_launch_supported else "Session options" }}</summary>
+    <form id="cookies-form" class="form">
+      <div class="field">
+        <label for="session-ss">session_ss</label>
+        <input id="session-ss" type="text" placeholder="Paste session_ss here">
+      </div>
+      <div class="row">
+        <button class="btn btn-sm" type="submit">Save manually</button>
+        <button class="btn btn-sm btn-quiet {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-chrome">Import Chrome</button>
+        <button class="btn btn-sm btn-quiet {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}" type="button" id="import-edge">Import Edge</button>
+        <button class="btn btn-sm btn-danger" type="button" id="clear-cookies">Clear session</button>
+      </div>
+    </form>
+  </details>
 </section>

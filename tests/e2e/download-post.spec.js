@@ -16,8 +16,8 @@ test("downloads a real TikTok post", async ({ page }) => {
   test.skip(!POST_URL, "set TIKTOK_POST_URL to a current TikTok post to run this");
 
   await page.goto("/download");
-  await page.getByLabel("TikTok post URL").fill(POST_URL);
-  await page.getByRole("button", { name: "Download" }).click();
+  await page.getByLabel("Link — TikTok or Instagram").fill(POST_URL);
+  await page.getByRole("button", { name: "Save post" }).click();
 
   const notice = page.locator("#post-download-notice");
   await expect(notice).not.toBeEmpty();
@@ -29,13 +29,13 @@ test("downloads a real TikTok post", async ({ page }) => {
     `the post at ${POST_URL} is gone: ${noticeText}`,
   );
 
-  await expect(notice).toContainText("Post downloaded");
+  await expect(notice).toContainText("Post filed");
 
   const result = page.locator("#post-download-result");
-  await expect(result).toContainText("Post download complete");
+  await expect(result).toContainText("filed");
   await expect(result).toContainText("output/posts/");
 
-  const fileLinks = result.locator("a.btn-primary");
+  const fileLinks = result.locator(".file-row a.btn");
   await expect(fileLinks.first()).toBeVisible();
 
   const response = await page.request.get(await fileLinks.first().getAttribute("href"));

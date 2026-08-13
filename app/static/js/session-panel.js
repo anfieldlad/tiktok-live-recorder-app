@@ -1,11 +1,24 @@
+/**
+ * The masthead carries one dot for two platforms, so neither panel owns it
+ * alone: each reports its own state here and the dot only reads "filed" when
+ * both sessions are saved.
+ */
+window.sessionStates = window.sessionStates || {};
+window.reportSessionState = function reportSessionState(platform, configured) {
+  window.sessionStates[platform] = Boolean(configured);
+  const dot = document.getElementById("session-dot");
+  if (!dot) return;
+  const known = Object.values(window.sessionStates);
+  const allReady = known.length === 2 && known.every(Boolean);
+  dot.classList.toggle("is-off", !allReady);
+};
+
 function initSessionPanel() {
   const sessionNotice = document.getElementById("session-notice");
   const cookiesForm = document.getElementById("cookies-form");
   const clearCookiesButton = document.getElementById("clear-cookies");
   const importChromeButton = document.getElementById("import-chrome");
   const importEdgeButton = document.getElementById("import-edge");
-  const sessionPill = document.getElementById("session-pill");
-  const sessionDot = document.getElementById("session-dot");
   const loginChromeButton = document.getElementById("login-chrome");
   const loginEdgeButton = document.getElementById("login-edge");
   const captureLoginButton = document.getElementById("capture-login");
@@ -22,11 +35,7 @@ function initSessionPanel() {
   }
 
   function setSessionState(configured) {
-    if (sessionPill) sessionPill.textContent = configured ? "Session ready" : "Session needed";
-    if (sessionDot) {
-      sessionDot.classList.toggle("is-ready", configured);
-      sessionDot.classList.toggle("is-needed", !configured);
-    }
+    window.reportSessionState("tiktok", configured);
   }
 
   function openDrawer() {

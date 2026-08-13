@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -112,12 +112,12 @@ def create_app() -> FastAPI:
         base_path = settings.root_path.rstrip("/")
         jobs = [job.model_dump(mode="json") for job in job_store.list_jobs()]
         watch_jobs = [job.model_dump(mode="json") for job in watch_store.list_jobs()]
-        if platform == "instagram":
-            cookies_configured = instagram_cookie_service.is_configured()
-            browser_login_status = instagram_browser_login_service.status()
-        else:
-            cookies_configured = cookie_service.is_configured()
-            browser_login_status = browser_login_service.status()
+        # Every page carries both platforms' status: the drawer shows them
+        # side by side, so neither depends on which page you are on.
+        cookies_configured = cookie_service.is_configured()
+        browser_login_status = browser_login_service.status()
+        ig_cookies_configured = instagram_cookie_service.is_configured()
+        ig_browser_login_status = instagram_browser_login_service.status()
         return templates.TemplateResponse(
             request,
             template_name,
@@ -131,6 +131,8 @@ def create_app() -> FastAPI:
                 "base_path": base_path,
                 "cookies_configured": cookies_configured,
                 "browser_login_status": browser_login_status,
+                "ig_cookies_configured": ig_cookies_configured,
+                "ig_browser_login_status": ig_browser_login_status,
             },
         )
 
@@ -146,9 +148,11 @@ def create_app() -> FastAPI:
     def download_page(request: Request) -> HTMLResponse:
         return render_dashboard(request, "download.html", "download")
 
-    @app.get("/instagram", response_class=HTMLResponse)
-    def instagram_page(request: Request) -> HTMLResponse:
-        return render_dashboard(request, "instagram_download.html", "instagram", platform="instagram")
+    @app.get("/instagram")
+    def instagram_page() -> RedirectResponse:
+        """Kept so old links and bookmarks still work. Saving a post is one
+        page now; it picks the platform from the URL you paste."""
+        return RedirectResponse(url=f"{settings.root_path.rstrip('/')}/download")
 
     @app.api_route("/favicon.svg", methods=["GET", "HEAD"])
     def favicon_svg() -> FileResponse:
