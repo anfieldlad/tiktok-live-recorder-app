@@ -62,13 +62,13 @@ function initWatchPage() {
     watchContainer.innerHTML = jobs.map((job) => {
       const liveClass = isLivePhase(job.status) ? " live" : "";
       return `
-        <article class="job-card">
+        <article class="job-card${liveClass}">
           <header class="job-header">
             <div>
+              <span class="job-id">No. ${escapeHtml(job.id.slice(0, 4).toUpperCase())} · ${escapeHtml(formatDate(job.created_at))}</span>
               <h3 class="job-title">${escapeHtml(job.username || job.url || "-")}</h3>
-              <span class="job-id">${escapeHtml(job.id)}</span>
             </div>
-            <span class="status-pill ${badgeClass(job.status)}${liveClass}">${escapeHtml(humanizeStatus(job.status))}</span>
+            <span class="stamp ${badgeClass(job.status)}">${escapeHtml(humanizeStatus(job.status))}</span>
           </header>
           ${job.last_message ? `<p class="job-message">${escapeHtml(job.last_message)}</p>` : ""}
           <dl class="job-stats">

@@ -1,51 +1,38 @@
 {% extends "base.html" %}
 
-{% block hero_eyebrow %}Live now{% endblock %}
-{% block page_title %}Record live{% endblock %}
-{% block hero_description %}Start a recording immediately when the creator is already live. If they are offline, switch to Auto-record in one click.{% endblock %}
-
 {% block page_content %}
-<section class="layout layout-split">
-  <aside class="surface">
-    <div class="card-head">
-      <h2>New recording</h2>
-      <p>Paste a TikTok username or live URL. We'll check access first, then start.</p>
-    </div>
-    <form id="recording-form" class="form">
-      <div class="field">
-        <label for="record-source">TikTok username or live URL</label>
-        <input id="record-source" type="text" placeholder="@example_creator or https://www.tiktok.com/@user/live">
-      </div>
-      <div class="field">
-        <label for="record-duration">Duration in seconds <span class="muted">(optional)</span></label>
-        <input id="record-duration" type="number" min="1" placeholder="Leave blank to record until live ends">
-      </div>
-      <div class="row">
-        <button class="btn btn-primary" type="submit">Start recording</button>
-        <button class="btn btn-ghost" type="button" id="clear-record-form">Clear</button>
-      </div>
-    </form>
-    <div id="record-notice" class="notice">Enter a TikTok username or live URL, then click Start recording.</div>
-    <div id="record-helper-actions" class="row helper-row"></div>
-  </aside>
+<section class="sheet rise d1">
+  <div class="eyebrow">Entry — live capture · TikTok</div>
+  <h1>Record a broadcast<br>before it’s gone</h1>
+  <p class="lede">Give a TikTok username or live URL. Access is checked first, then the deck starts and the file is held here until you take it.</p>
 
-  <section class="surface">
-    <div class="card-head split">
-      <div>
-        <h2>Recording activity</h2>
-        <p>Track each recording with a phase, a status message, and quick actions.</p>
-      </div>
-      <div class="row">
-        <button class="btn btn-ghost btn-icon" type="button" id="refresh-recordings" aria-label="Refresh" title="Refresh">↻</button>
-        <button class="btn btn-ghost" type="button" id="toggle-auto-refresh" aria-pressed="true">Auto-refresh: On</button>
-      </div>
+  <form id="recording-form" class="form">
+    <div class="field">
+      <label for="record-source">Subject — username or live URL</label>
+      <input id="record-source" type="text" placeholder="@example_creator">
     </div>
-    <div id="jobs-container" class="jobs"></div>
-  </section>
+    <div class="field">
+      <label for="record-duration">Duration in seconds — optional</label>
+      <input id="record-duration" type="number" min="1" placeholder="leave blank to record until the live ends">
+    </div>
+    <div class="row">
+      <button class="btn" type="submit">Begin capture</button>
+      <button class="btn btn-quiet" type="button" id="clear-record-form">Clear</button>
+    </div>
+  </form>
+  <div id="record-notice" class="notice">Enter a TikTok username or live URL, then begin.</div>
+  <div id="record-helper-actions" class="row"></div>
 </section>
+
+<div class="filed-head rise d2">
+  <h2>Filed</h2><span class="rule"></span>
+  <button class="btn btn-quiet btn-sm" type="button" id="refresh-recordings">Refresh</button>
+  <button class="btn btn-quiet btn-sm" type="button" id="toggle-auto-refresh" aria-pressed="true">Auto: on</button>
+</div>
+<div id="jobs-container" class="rise d3"></div>
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/record-page.js?v=4' }}"></script>
+<script src="{{ (base_path or '') ~ '/static/js/record-page.js?v=5' }}"></script>
 <script>initRecordPage();</script>
 {% endblock %}

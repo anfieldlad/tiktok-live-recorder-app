@@ -748,3 +748,75 @@ input:focus, textarea:focus {
 .footer-item.warn{color:var(--failed);font-weight:400}
 :focus-visible{outline:2px solid var(--ink-2);outline-offset:2px}
 @media (max-width:620px){ .tabs-note{margin-left:0;width:100%;padding-top:0} }
+
+/* ==========================================================================
+   The sheet — a page's entry form
+   ========================================================================== */
+
+.sheet{background:var(--card);border:1px solid var(--card-edge);box-shadow:var(--shadow-card);
+       padding:22px 24px 24px;position:relative}
+.sheet::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ink-2)}
+.eyebrow{font:400 10px/1 var(--font-mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.sheet h1{font-variation-settings:"opsz" 144,"SOFT" 30;font-weight:300;font-size:40px;line-height:1.02;
+          letter-spacing:-.022em;margin:10px 0 6px}
+.lede{font:400 15px/1.55 var(--font-ui);color:var(--ink-soft);max-width:46ch;margin:0}
+.field{margin-top:20px}
+.field label{display:block;font:400 10px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;
+             color:var(--dim);margin-bottom:7px}
+.field input{width:100%;background:transparent;border:0;border-bottom:1.5px solid var(--rule);
+             font:400 15px/1.5 var(--font-mono);color:var(--ink);padding:8px 2px;transition:border-color .18s}
+.field input::placeholder{color:#b3a892}
+.field input:focus{outline:none;border-bottom-color:var(--ink-2)}
+.row{display:flex;align-items:center;gap:14px;margin-top:22px;flex-wrap:wrap}
+/* the helper-action row is empty until there is something to offer */
+.row:empty{display:none}
+.btn{font:400 11px/1 var(--font-mono);letter-spacing:.18em;text-transform:uppercase;padding:13px 20px;
+     border:1.5px solid var(--ink);background:var(--ink);color:var(--card);cursor:pointer;
+     text-decoration:none;display:inline-block;transition:transform .12s,box-shadow .18s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(34,29,23,.22)}
+.btn-quiet,.btn-secondary,.btn-ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.btn-danger{background:transparent;color:var(--failed);border-color:var(--failed)}
+.btn-warn{background:transparent;color:var(--pending);border-color:var(--pending)}
+.btn-sm{font-size:10px;padding:9px 14px}
+.notice{font:400 13px/1.5 var(--font-ui);color:var(--dim);border-left:2px solid var(--rule);
+        padding-left:12px;margin-top:18px}
+.notice.error{color:var(--failed);border-left-color:var(--failed)}
+
+/* ==========================================================================
+   Filed — the register's cards
+   ========================================================================== */
+
+.filed-head{display:flex;align-items:baseline;gap:12px;margin:34px 0 14px}
+.filed-head h2{font:400 13px/1 var(--font-mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.filed-head .rule{flex:1;height:1px;background:var(--rule)}
+.job-card{background:var(--card);border:1px solid var(--card-edge);box-shadow:var(--shadow-card);
+          padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden}
+.job-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rule)}
+.job-card.live::before{background:var(--ink-2);animation:inkpulse 2.4s ease-in-out infinite}
+@keyframes inkpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.job-header{display:flex;align-items:flex-start;gap:14px}
+.job-id{font:400 10px/1.4 var(--font-mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.job-title{font-family:var(--font-display);font-variation-settings:"opsz" 100,"SOFT" 40;font-weight:400;
+           font-size:23px;line-height:1.15;letter-spacing:-.01em;margin:2px 0 0}
+.job-message{font:400 14px/1.5 var(--font-ui);color:var(--ink-soft);margin:10px 0 0}
+.stamp{margin-left:auto;flex:none;border:1.5px solid var(--filed);color:var(--filed);
+       font:400 9px/1 var(--font-mono);letter-spacing:.18em;text-transform:uppercase;padding:6px 8px;
+       transform:rotate(-4deg);opacity:.9;animation:stampin .5s cubic-bezier(.2,1.4,.4,1) both}
+.stamp.soft{border-color:var(--pending);color:var(--pending)}
+.stamp.bad{border-color:var(--failed);color:var(--failed)}
+.stamp.good{border-color:var(--filed);color:var(--filed)}
+@keyframes stampin{from{transform:rotate(-14deg) scale(1.5);opacity:0}to{transform:rotate(-4deg) scale(1);opacity:.9}}
+.job-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 16px;margin-top:14px;
+           border-top:1px solid var(--rule);padding-top:10px}
+.job-stats .wide{grid-column:1/-1}
+.job-stats dt{font:400 9px/1.6 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.job-stats dd{font:400 13px/1.4 var(--font-mono);margin:0;color:var(--ink);overflow-wrap:anywhere}
+.job-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.retention{margin-top:12px;font:400 11px/1.4 var(--font-mono);letter-spacing:.1em;color:var(--dim);
+           border-top:1px dashed var(--rule);padding-top:9px}
+.empty{border:1.5px dashed var(--rule);text-align:center;padding:34px 20px}
+.empty-icon{display:none}
+.empty-title{display:block;font-family:var(--font-display);font-size:19px;margin-bottom:6px}
+.empty span{font:400 14px/1.5 var(--font-ui);color:var(--dim)}
+.elapsed-counter{font:400 12px/1 var(--font-mono);color:var(--dim);margin-left:8px}
+@media (max-width:620px){ .job-stats{grid-template-columns:repeat(2,1fr)} }

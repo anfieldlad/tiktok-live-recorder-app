@@ -33,12 +33,7 @@
 
     {% if platform == "instagram" %}{% include "_ig_session_panel.html" %}{% else %}{% include "_session_panel.html" %}{% endif %}
 
-    <main class="page stack">
-      <header class="page-head">
-        <p class="page-eyebrow">{% block hero_eyebrow %}{% endblock %}</p>
-        <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
-        <p class="page-lead">{% block hero_description %}{% endblock %}</p>
-      </header>
+    <main>
       {% block page_content %}{% endblock %}
     </main>
 

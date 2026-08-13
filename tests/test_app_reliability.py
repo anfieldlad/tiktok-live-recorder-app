@@ -215,7 +215,9 @@ class AppReliabilityTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Instagram session", response.text)
-        self.assertIn('href="/instagram"', response.text)
+        # The nav no longer links to /instagram by name: one Save post tab
+        # covers both platforms, and it is the active one here.
+        self.assertIn('class="tab is-active" href="/download"', response.text)
 
     def test_instagram_download_rejects_non_instagram_url(self) -> None:
         client = self.create_test_client()
