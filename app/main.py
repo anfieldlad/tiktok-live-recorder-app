@@ -112,12 +112,12 @@ def create_app() -> FastAPI:
         base_path = settings.root_path.rstrip("/")
         jobs = [job.model_dump(mode="json") for job in job_store.list_jobs()]
         watch_jobs = [job.model_dump(mode="json") for job in watch_store.list_jobs()]
-        if platform == "instagram":
-            cookies_configured = instagram_cookie_service.is_configured()
-            browser_login_status = instagram_browser_login_service.status()
-        else:
-            cookies_configured = cookie_service.is_configured()
-            browser_login_status = browser_login_service.status()
+        # Every page carries both platforms' status: the drawer shows them
+        # side by side, so neither depends on which page you are on.
+        cookies_configured = cookie_service.is_configured()
+        browser_login_status = browser_login_service.status()
+        ig_cookies_configured = instagram_cookie_service.is_configured()
+        ig_browser_login_status = instagram_browser_login_service.status()
         return templates.TemplateResponse(
             request,
             template_name,
@@ -131,6 +131,8 @@ def create_app() -> FastAPI:
                 "base_path": base_path,
                 "cookies_configured": cookies_configured,
                 "browser_login_status": browser_login_status,
+                "ig_cookies_configured": ig_cookies_configured,
+                "ig_browser_login_status": ig_browser_login_status,
             },
         )
 

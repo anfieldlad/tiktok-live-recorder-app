@@ -31,7 +31,16 @@
       </nav>
     </header>
 
-    {% if platform == "instagram" %}{% include "_ig_session_panel.html" %}{% else %}{% include "_session_panel.html" %}{% endif %}
+    <aside class="session-drawer" id="session-drawer" aria-hidden="true">
+      <div class="session-drawer-inner">
+        <div class="session-drawer-head">
+          <h2>Sessions</h2>
+          <button class="btn btn-quiet btn-sm" type="button" id="session-close" aria-label="Close sessions">Close</button>
+        </div>
+        {% include "_session_panel.html" %}
+        {% include "_ig_session_panel.html" %}
+      </div>
+    </aside>
 
     <main>
       {% block page_content %}{% endblock %}
@@ -50,13 +59,9 @@
     };
   </script>
   <script src="{{ (base_path or '') ~ '/static/js/app-common.js?v=3' }}"></script>
-  {% if platform == "instagram" %}
-  <script src="{{ (base_path or '') ~ '/static/js/ig-session-panel.js?v=1' }}"></script>
-  <script>initIgSessionPanel();</script>
-  {% else %}
-  <script src="{{ (base_path or '') ~ '/static/js/session-panel.js?v=2' }}"></script>
-  <script>initSessionPanel();</script>
-  {% endif %}
+  <script src="{{ (base_path or '') ~ '/static/js/session-panel.js?v=3' }}"></script>
+  <script src="{{ (base_path or '') ~ '/static/js/ig-session-panel.js?v=2' }}"></script>
+  <script>initSessionPanel(); initIgSessionPanel();</script>
   {% block page_scripts %}{% endblock %}
 </body>
 </html>

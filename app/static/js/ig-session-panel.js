@@ -1,18 +1,13 @@
 function initIgSessionPanel() {
-  const sessionNotice = document.getElementById("session-notice");
-  const cookiesForm = document.getElementById("cookies-form");
-  const clearCookiesButton = document.getElementById("clear-cookies");
-  const importChromeButton = document.getElementById("import-chrome");
-  const importEdgeButton = document.getElementById("import-edge");
-  const sessionPill = document.getElementById("session-pill");
-  const sessionDot = document.getElementById("session-dot");
-  const loginChromeButton = document.getElementById("login-chrome");
-  const loginEdgeButton = document.getElementById("login-edge");
-  const captureLoginButton = document.getElementById("capture-login");
-  const closeLoginButton = document.getElementById("close-login");
-  const sessionToggle = document.getElementById("session-toggle");
-  const sessionDrawer = document.getElementById("session-drawer");
-  const sessionCloseButton = document.getElementById("session-close");
+  const sessionNotice = document.getElementById("ig-session-notice");
+  const cookiesForm = document.getElementById("ig-cookies-form");
+  const clearCookiesButton = document.getElementById("ig-clear-cookies");
+  const importChromeButton = document.getElementById("ig-import-chrome");
+  const importEdgeButton = document.getElementById("ig-import-edge");
+  const loginChromeButton = document.getElementById("ig-login-chrome");
+  const loginEdgeButton = document.getElementById("ig-login-edge");
+  const captureLoginButton = document.getElementById("ig-capture-login");
+  const closeLoginButton = document.getElementById("ig-close-login");
 
   function setBrowserLoginControlsEnabled(enabled) {
     if (loginChromeButton) loginChromeButton.disabled = !enabled;
@@ -21,32 +16,10 @@ function initIgSessionPanel() {
     if (closeLoginButton) closeLoginButton.disabled = !enabled;
   }
 
+  // The drawer itself belongs to session-panel.js. Two scripts binding the
+  // same toggle would open and close it on one click.
   function setSessionState(configured) {
-    if (sessionPill) sessionPill.textContent = configured ? "Session ready" : "Session needed";
-    if (sessionDot) {
-      sessionDot.classList.toggle("is-ready", configured);
-      sessionDot.classList.toggle("is-needed", !configured);
-    }
-  }
-
-  function openDrawer() {
-    if (!sessionDrawer || !sessionToggle) return;
-    sessionDrawer.classList.add("is-open");
-    sessionDrawer.setAttribute("aria-hidden", "false");
-    sessionToggle.setAttribute("aria-expanded", "true");
-  }
-
-  function closeDrawer() {
-    if (!sessionDrawer || !sessionToggle) return;
-    sessionDrawer.classList.remove("is-open");
-    sessionDrawer.setAttribute("aria-hidden", "true");
-    sessionToggle.setAttribute("aria-expanded", "false");
-  }
-
-  function toggleDrawer() {
-    if (!sessionDrawer) return;
-    if (sessionDrawer.classList.contains("is-open")) closeDrawer();
-    else openDrawer();
+    window.reportSessionState("instagram", configured);
   }
 
   async function refreshSessionStatus() {
@@ -65,7 +38,7 @@ function initIgSessionPanel() {
 
   async function saveCookies(event) {
     event.preventDefault();
-    const sessionInput = document.getElementById("session-id");
+    const sessionInput = document.getElementById("ig-session-id");
     const sessionValue = sessionInput.value.trim();
     if (!sessionValue) { setNotice(sessionNotice, "Please enter a sessionid value.", "error"); return; }
     try {
@@ -83,7 +56,7 @@ function initIgSessionPanel() {
       const response = await fetch(appPath("/instagram/auth/cookies"), { method: "DELETE" });
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't clear the Instagram session."));
       await response.json();
-      const sessionInput = document.getElementById("session-id");
+      const sessionInput = document.getElementById("ig-session-id");
       if (sessionInput) sessionInput.value = "";
       await refreshSessionStatus();
       setNotice(sessionNotice, "Instagram session cleared.", "success");
@@ -141,12 +114,10 @@ function initIgSessionPanel() {
   if (loginEdgeButton) loginEdgeButton.addEventListener("click", () => startBrowserLogin("edge"));
   if (captureLoginButton) captureLoginButton.addEventListener("click", captureBrowserLogin);
   if (closeLoginButton) closeLoginButton.addEventListener("click", closeBrowserLogin);
-  if (sessionToggle) sessionToggle.addEventListener("click", toggleDrawer);
-  if (sessionCloseButton) sessionCloseButton.addEventListener("click", closeDrawer);
 
   refreshSessionStatus().catch((error) => {
     if (sessionNotice) setNotice(sessionNotice, error.message, "error");
   });
 
-  return { refreshSessionStatus, sessionNotice, openDrawer, closeDrawer };
+  return { refreshSessionStatus, sessionNotice };
 }
