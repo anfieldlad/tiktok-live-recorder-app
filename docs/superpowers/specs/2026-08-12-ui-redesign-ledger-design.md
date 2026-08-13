@@ -27,7 +27,7 @@ footer. Nothing else — no route, id, or class carries the product name.
 
 ## Concept
 
-**A register of things that were broadcast once.** The app captures live
+**A register of things that were published once.** The app captures live
 streams and posts that vanish — a catalogue, not a dashboard. So: cream card
 stock on a ruled board, an oxblood margin rule, entries numbered, statuses
 applied as rubber stamps.

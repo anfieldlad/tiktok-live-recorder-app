@@ -167,7 +167,7 @@ In `app/templates/base.html`, replace the whole `<header class="topbar">…</hea
           <span class="mark" aria-hidden="true"></span>
           <span class="title">Still Here</span>
         </a>
-        <span class="estd">A register of things broadcast once</span>
+        <span class="estd">A register of things published once</span>
         <button class="session-state" type="button" id="session-toggle" aria-expanded="false">
           <span class="session-dot" id="session-dot"></span><span id="session-pill">Sessions</span>
         </button>

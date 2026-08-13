@@ -18,7 +18,7 @@
           <span class="mark" aria-hidden="true"></span>
           <span class="title">Still Here</span>
         </a>
-        <span class="estd">A register of things broadcast once</span>
+        <span class="estd">A register of things published once</span>
         <button class="session-state" type="button" id="session-toggle" aria-controls="session-drawer" aria-expanded="false">
           <span class="session-dot" id="session-dot"></span><span id="session-pill">Sessions</span>
         </button>
@@ -27,7 +27,12 @@
         <a class="tab {{ 'is-active' if page_name == 'record' else '' }}" href="{{ base_path or '' }}/">Record live</a>
         <a class="tab {{ 'is-active' if page_name == 'watch' else '' }}" href="{{ base_path or '' }}/watch">Auto-record</a>
         <a class="tab {{ 'is-active' if page_name in ('download', 'instagram') else '' }}" href="{{ base_path or '' }}/download">Save post</a>
+        {# The note qualifies the two live-capture tabs. On Save post it would
+           sit beside the active tab and read as a label for that page, which
+           is the one page that does take Instagram links. #}
+        {% if page_name in ('record', 'watch') %}
         <span class="tabs-note">Live recording · TikTok only</span>
+        {% endif %}
       </nav>
     </header>
 

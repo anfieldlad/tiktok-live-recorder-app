@@ -230,6 +230,15 @@ class AppReliabilityTests(unittest.TestCase):
         self.assertIn("Instagram session", response.text)
         self.assertIn("TikTok session", response.text)
 
+    def test_the_tiktok_only_note_stays_off_the_save_post_page(self) -> None:
+        """The note qualifies live capture. Beside the active Save post tab it
+        reads as a label for that page — the one page that takes Instagram."""
+        client = self.create_test_client()
+
+        self.assertIn("TikTok only", client.get("/").text)
+        self.assertIn("TikTok only", client.get("/watch").text)
+        self.assertNotIn("TikTok only", client.get("/download").text)
+
     def test_every_page_carries_both_session_sections(self) -> None:
         """The drawer is in the shared chrome, so a session can be fixed from
         wherever you happen to be — not only from that platform's page."""
