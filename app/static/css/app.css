@@ -177,6 +177,14 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
    rule it is drawn to sit on. Lift it above the strip instead. */
 @media (max-width:620px){
   .tabs-note{order:-1;margin-left:0;width:100%;padding:0 0 9px}
+
+  /* Give the brand the whole first row so the subtitle and the session state
+     share the second, rather than each claiming a line. At full size the pair
+     needs ~351px and overflows a 360px phone, so the subtitle sets a shade
+     tighter here — still the same face and colour, just less tracking. */
+  .brand{flex-basis:100%}
+  .estd{font-size:9px;letter-spacing:.09em}
+  .session-state{white-space:nowrap}
 }
 
 /* ==========================================================================
