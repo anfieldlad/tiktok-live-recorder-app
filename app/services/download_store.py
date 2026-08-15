@@ -5,8 +5,9 @@ import logging
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
-from app.models.download import DownloadEntry
+from app.models.download import DownloadEntry, DownloadStatus
 from app.models.recording import utc_now
 
 
@@ -48,6 +49,48 @@ class DownloadStore:
                 entries.append(entry)
             self._write(entries)
         return entry
+
+    def update_entry(
+        self, download_id: str, updater: Callable[[DownloadEntry], DownloadEntry]
+    ) -> DownloadEntry | None:
+        """Read-modify-write under the lock. Mirrors JobStore.update_job.
+
+        Two workers and a request thread all write this file, so callers must
+        never read, mutate and save as three separate steps.
+        """
+        with self._lock:
+            entries = self._read()
+            for index, entry in enumerate(entries):
+                if entry.id == download_id:
+                    entries[index] = updater(entry)
+                    self._write(entries)
+                    return entries[index]
+        return None
+
+    def fail_orphaned_jobs(self) -> int:
+        """Mark work that was in flight when the process died.
+
+        The queue lives in memory and the fetchers are subprocesses, so nothing
+        survives a restart. Without this, a queued or running entry spins in the
+        UI forever waiting for a worker that no longer exists.
+        """
+        with self._lock:
+            entries = self._read()
+            changed = 0
+            for index, entry in enumerate(entries):
+                if entry.status not in {DownloadStatus.queued, DownloadStatus.running}:
+                    continue
+                entries[index] = entry.model_copy(
+                    update={
+                        "status": DownloadStatus.failed,
+                        "error": "the server restarted before this download finished",
+                        "finished_at": utc_now(),
+                    }
+                )
+                changed += 1
+            if changed:
+                self._write(entries)
+        return changed
 
     def mark_fetched(self, download_id: str) -> DownloadEntry | None:
         """Record that the user has been given this download."""
