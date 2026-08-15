@@ -54,8 +54,8 @@ function initWatchPage() {
       watchContainer.innerHTML = `
         <div class="empty">
           <span class="empty-icon">○</span>
-          <span class="empty-title">No watches yet</span>
-          <span>Create one to wait for a live and start automatically.</span>
+          <span class="empty-title">Nothing filed yet</span>
+          <span>Place an order above.</span>
         </div>`;
       return;
     }

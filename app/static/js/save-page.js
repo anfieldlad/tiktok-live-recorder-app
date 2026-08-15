@@ -51,6 +51,9 @@ function initSavePage() {
 
   const basePathFor = (platform) => (platform === "instagram" ? "/instagram/downloads" : "/downloads");
   const fileName = (path) => String(path ?? "").split(/[\\/]/).pop() || "download";
+  // Ids are "<timestamp>-<hex>"; the hex is the distinguishing part and
+  // reads as a register number. The whole id is a mouthful on a card.
+  const registerNumber = (id) => String(id ?? "").split("-").pop().toUpperCase();
   const isInstagram = (entry) => entry.platform === "instagram";
   const isActive = (entry) => entry.status === "queued" || entry.status === "running";
 
@@ -78,7 +81,7 @@ function initSavePage() {
 
   function emptyState() {
     return `<div class="empty"><span class="empty-title">Nothing filed yet</span>
-      <span>Paste a TikTok or Instagram link above.</span></div>`;
+      <span>Paste a link above.</span></div>`;
   }
 
   function renderCard(entry) {
@@ -99,9 +102,9 @@ function initSavePage() {
     const message = entry.status === "failed"
       ? `<p class="job-message">${escapeHtml(entry.error || "The download failed.")}</p>`
       : entry.status === "running"
-        ? `<p class="job-message">Asking ${isInstagram(entry) ? "Instagram" : "TikTok"} for the media.</p>`
+        ? `<p class="job-message">Fetching from ${isInstagram(entry) ? "Instagram" : "TikTok"}.</p>`
         : entry.status === "queued"
-          ? `<p class="job-message">Two downloads run at a time. This one starts when a slot frees.</p>`
+          ? `<p class="job-message">Two run at a time.</p>`
           : "";
     const note = retentionNote(entry);
 
@@ -109,7 +112,7 @@ function initSavePage() {
       <article class="job-card${isActive(entry) ? " live" : ""}" data-series="${isInstagram(entry) ? "ig" : "tt"}">
         <div class="job-header">
           <div>
-            <span class="job-id">No. ${escapeHtml(entry.id)} · ${escapeHtml(isInstagram(entry) ? "instagram" : "tiktok")}</span>
+            <span class="job-id">No. ${escapeHtml(registerNumber(entry.id))} · ${escapeHtml(isInstagram(entry) ? "instagram" : "tiktok")}</span>
             <h3 class="job-title">${escapeHtml(titleFor(entry))}</h3>
           </div>
           <span class="stamp ${stamp.cls}">${escapeHtml(stamp.label)}</span>
@@ -147,12 +150,12 @@ function initSavePage() {
     consecutivePollFailures += 1;
     if (consecutivePollFailures < POLL_FAILURES_BEFORE_WARNING) return;
     pollWarningShown = true;
-    setNotice(notice, "Lost connection to the app — still retrying…", "error");
+    setNotice(notice, "Lost connection — retrying…", "error");
   }
 
   async function fetchDownloads() {
     const response = await fetch(appPath("/downloads"));
-    if (!response.ok) throw new Error(`Failed to load the register: ${response.status}`);
+    if (!response.ok) throw new Error(`Could not load the register: ${response.status}`);
     render(await response.json());
   }
 
@@ -172,7 +175,7 @@ function initSavePage() {
     const url = urlInput.value.trim();
     const platform = platformFor(url);
     if (!platform) {
-      setNotice(notice, "That does not look like a TikTok or Instagram link.", "error");
+      setNotice(notice, "Not a TikTok or Instagram link.", "error");
       return;
     }
     try {
@@ -181,11 +184,11 @@ function initSavePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      if (!response.ok) throw new Error(await readApiError(response, "The download could not be started."));
+      if (!response.ok) throw new Error(await readApiError(response, "Could not start that download."));
       await response.json();
       // Clear on submit so the next link can be pasted immediately.
       urlInput.value = "";
-      setNotice(notice, "Entered in the register. Paste another if you like.");
+      setNotice(notice, "Entered. Paste another.");
       await fetchDownloads();
     } catch (error) {
       setNotice(notice, error.message, "error");
@@ -200,7 +203,7 @@ function initSavePage() {
       const base = basePathFor(button.dataset.platform);
       const response = await fetch(appPath(`${base}/${button.dataset.id}`), { method: "DELETE" });
       if (!response.ok) throw new Error(await readApiError(response, "Could not discard it."));
-      setNotice(notice, "Discarded from the server.");
+      setNotice(notice, "Discarded.");
       await fetchDownloads();
     } catch (error) {
       button.disabled = false;

@@ -84,8 +84,8 @@ function initRecordPage() {
       jobsContainer.innerHTML = `
         <div class="empty">
           <span class="empty-icon">●</span>
-          <span class="empty-title">No recordings yet</span>
-          <span>When a recording starts, it will appear here.</span>
+          <span class="empty-title">Nothing filed yet</span>
+          <span>Captures appear here.</span>
         </div>`;
       return;
     }

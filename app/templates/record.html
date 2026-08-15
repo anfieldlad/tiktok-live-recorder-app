@@ -4,7 +4,7 @@
 <section class="sheet rise d1">
   <div class="eyebrow">Entry — live capture · TikTok</div>
   <h1>Record a broadcast<br>before it’s gone</h1>
-  <p class="lede">Give a TikTok username or live URL. Access is checked first, then the deck starts and the file is held here until you take it.</p>
+  <p class="lede">Access is checked first. The file is held here until you take it.</p>
 
   <form id="recording-form" class="form">
     <div class="field">
@@ -13,14 +13,14 @@
     </div>
     <div class="field">
       <label for="record-duration">Duration in seconds — optional</label>
-      <input id="record-duration" type="number" min="1" placeholder="leave blank to record until the live ends">
+      <input id="record-duration" type="number" min="1" placeholder="blank = until the live ends">
     </div>
     <div class="row">
       <button class="btn" type="submit">Begin capture</button>
       <button class="btn btn-quiet" type="button" id="clear-record-form">Clear</button>
     </div>
   </form>
-  <div id="record-notice" class="notice">Enter a TikTok username or live URL, then begin.</div>
+  <div id="record-notice" class="notice">Enter a username or live URL.</div>
   <div id="record-helper-actions" class="row"></div>
 </section>
 
@@ -33,6 +33,6 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/record-page.js?v=5' }}"></script>
+<script src="{{ (base_path or '') ~ '/static/js/record-page.js?v=6' }}"></script>
 <script>initRecordPage();</script>
 {% endblock %}

@@ -4,19 +4,19 @@
 <section class="sheet rise d1">
   <div class="eyebrow">Entry — saved post</div>
   <h1>Save a post<br>before it’s gone</h1>
-  <p class="lede">Paste a TikTok or Instagram link. The register works out which is which and files the media here until you take it. Paste as many as you like — two are fetched at a time and the rest wait their turn.</p>
+  <p class="lede">Paste as many links as you like. Two fetch at once; the rest wait.</p>
 
   <form id="post-download-form" class="form">
     <div class="field">
       <label for="post-url">Link — TikTok or Instagram</label>
-      <input id="post-url" type="text" placeholder="https://www.tiktok.com/@… or https://www.instagram.com/p/…">
+      <input id="post-url" type="text" placeholder="tiktok.com/@… or instagram.com/p/…">
     </div>
     <div class="row">
       <button class="btn" type="submit" id="download-post-button">Save post</button>
       <button class="btn btn-quiet" type="button" id="clear-post-download-form">Clear</button>
     </div>
   </form>
-  <div id="post-download-notice" class="notice">Paste a link and the register will do the rest.</div>
+  <div id="post-download-notice" class="notice">Paste a link to begin.</div>
 </section>
 
 <div class="filed-head rise d2"><h2>Filed</h2><span class="rule"></span></div>
@@ -24,6 +24,6 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=2' }}"></script>
+<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=3' }}"></script>
 <script>initSavePage();</script>
 {% endblock %}

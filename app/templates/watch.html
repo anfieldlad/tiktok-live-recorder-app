@@ -4,7 +4,7 @@
 <section class="sheet rise d1">
   <div class="eyebrow">Entry — standing order · TikTok</div>
   <h1>Wait for a broadcast<br>that hasn’t started</h1>
-  <p class="lede">For a creator who is offline now. The register keeps checking, and the capture begins by itself the moment they go live.</p>
+  <p class="lede">For a creator who’s offline. Capture begins the moment they go live.</p>
 
   <form id="watch-form" class="form">
     <div class="field">
@@ -13,14 +13,14 @@
     </div>
     <div class="field">
       <label for="watch-duration">Duration in seconds — optional</label>
-      <input id="watch-duration" type="number" min="1" placeholder="leave blank to record until the live ends">
+      <input id="watch-duration" type="number" min="1" placeholder="blank = until the live ends">
     </div>
     <div class="row">
       <button class="btn" type="submit">Place the order</button>
       <button class="btn btn-quiet" type="button" id="clear-watch-form">Clear</button>
     </div>
   </form>
-  <div id="watch-notice" class="notice">Place a standing order to keep checking an account until the live becomes available.</div>
+  <div id="watch-notice" class="notice">The order stands until they go live.</div>
 </section>
 
 <div class="filed-head rise d2">
@@ -31,6 +31,6 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/watch-page.js?v=4' }}"></script>
+<script src="{{ (base_path or '') ~ '/static/js/watch-page.js?v=5' }}"></script>
 <script>initWatchPage();</script>
 {% endblock %}
