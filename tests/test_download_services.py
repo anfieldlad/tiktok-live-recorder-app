@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from app.models.download import DownloadEntry, DownloadPlatform, DownloadStatus
 from app.services.download_store import DownloadStore
 from app.services.post_download_service import (
     PostDownloadResult,
@@ -97,3 +98,54 @@ class DownloadErrorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DownloadIdOwnershipTests(unittest.TestCase):
+    """A job needs its id before the fetch begins, so the caller can poll it."""
+
+    def test_remember_keeps_the_lifecycle_the_job_service_wrote(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = DownloadStore(root / "data" / "downloads.json")
+            service = PostDownloadService(root / "output", download_store=store)
+            store.save_entry(
+                DownloadEntry(
+                    id="20260815-101500-abc123",
+                    platform=DownloadPlatform.tiktok_post,
+                    status=DownloadStatus.running,
+                    url="https://www.tiktok.com/@someone/video/123",
+                )
+            )
+
+            download_dir = service.output_dir / "20260815-101500-abc123"
+            download_dir.mkdir(parents=True)
+            media = download_dir / "video.mp4"
+            media.write_bytes(b"x" * 10)
+            service.remember(
+                PostDownloadResult(
+                    download_id="20260815-101500-abc123", output_dir=download_dir, files=[media]
+                )
+            )
+
+            entry = store.get_entry("20260815-101500-abc123")
+            self.assertEqual(entry.status, DownloadStatus.running, "the worker owns the status, not remember()")
+            self.assertEqual(entry.url, "https://www.tiktok.com/@someone/video/123")
+            self.assertEqual(entry.files, [str(media)])
+
+    def test_remember_still_creates_an_entry_when_nothing_pre_allocated_one(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = DownloadStore(root / "data" / "downloads.json")
+            service = PostDownloadService(root / "output", download_store=store)
+
+            download_dir = service.output_dir / "20260815-101500-def456"
+            download_dir.mkdir(parents=True)
+            media = download_dir / "video.mp4"
+            media.write_bytes(b"x" * 10)
+            service.remember(
+                PostDownloadResult(
+                    download_id="20260815-101500-def456", output_dir=download_dir, files=[media]
+                )
+            )
+
+            self.assertEqual(store.get_entry("20260815-101500-def456").status, DownloadStatus.finished)

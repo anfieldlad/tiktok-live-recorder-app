@@ -8,12 +8,11 @@ import sys
 import tempfile
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
 from app.instagram.services.instagram_cookie_service import InstagramCookieService
-from app.models.download import DownloadEntry, DownloadPlatform
+from app.models.download import DownloadEntry, DownloadPlatform, new_download_id
 from app.services.download_store import DownloadStore
 
 
@@ -41,8 +40,27 @@ class InstagramDownloadService:
         self._results: dict[str, InstagramDownloadResult] = {}
 
     def remember(self, result: InstagramDownloadResult) -> InstagramDownloadResult:
-        """Record a completed download so it can be served and, later, swept."""
-        if self.download_store is not None:
+        """Record where a download's files landed.
+
+        This merges rather than replaces: when a job service pre-allocated the
+        entry, the lifecycle fields on it (status, url, started_at) belong to
+        that service and must survive. Only the synchronous door reaches the
+        fallback branch, and there a completed download is exactly what this is.
+        """
+        if self.download_store is None:
+            self._results[result.download_id] = result
+            return result
+
+        updated = self.download_store.update_entry(
+            result.download_id,
+            lambda current: current.model_copy(
+                update={
+                    "output_dir": str(result.output_dir),
+                    "files": [str(path) for path in result.files],
+                }
+            ),
+        )
+        if updated is None:
             self.download_store.save_entry(
                 DownloadEntry(
                     id=result.download_id,
@@ -51,8 +69,6 @@ class InstagramDownloadService:
                     files=[str(path) for path in result.files],
                 )
             )
-        else:
-            self._results[result.download_id] = result
         return result
 
     def validate_url(self, url: str) -> str:
@@ -66,9 +82,9 @@ class InstagramDownloadService:
             raise ValueError("download URL must be an Instagram URL")
         return normalized
 
-    def download(self, url: str) -> InstagramDownloadResult:
+    def download(self, url: str, download_id: str | None = None) -> InstagramDownloadResult:
         normalized_url = self.validate_url(url)
-        download_id = self._new_download_id()
+        download_id = download_id or new_download_id()
         download_dir = self.output_dir / download_id
         download_dir.mkdir(parents=True, exist_ok=False)
 
@@ -221,10 +237,6 @@ class InstagramDownloadService:
             for path in media_files:
                 archive.write(path, arcname=path.name)
         return archive_path
-
-    def _new_download_id(self) -> str:
-        timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-        return f"{timestamp}-{secrets.token_hex(3)}"
 
     def _format_error(self, output: str, default: str) -> str:
         lines = [line.strip() for line in (output or "").splitlines() if line.strip()]
