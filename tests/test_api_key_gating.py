@@ -192,5 +192,112 @@ class TierThreeTests(GatingTestCase):
         self.assertEqual(response.status_code, 404, "404 means it reached the handler, not 401")
 
 
+class TierTwoTests(GatingTestCase):
+    """The assertions that distinguish this design from simply blocking the
+    endpoint. Both are easy to get silently wrong."""
+
+    api_key = TEST_KEY
+
+    def test_a_download_without_the_key_is_accepted_but_anonymous(self) -> None:
+        client = self.create_test_client()
+
+        response = client.post(
+            "/downloads?async=1", json={"url": "https://www.tiktok.com/@a/video/1"}
+        )
+
+        self.assertEqual(response.status_code, 201, "Tier 2 is open, not blocked")
+        entry = self.app.state.download_store.get_entry(response.json()["id"])
+        self.assertFalse(entry.use_session, "an anonymous fetch must not spend the session")
+
+    def test_a_download_with_the_key_runs_as_the_account_holder(self) -> None:
+        client = self.create_test_client()
+
+        response = client.post(
+            "/downloads?async=1",
+            json={"url": "https://www.tiktok.com/@a/video/1"},
+            headers={"X-API-Key": TEST_KEY},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        entry = self.app.state.download_store.get_entry(response.json()["id"])
+        self.assertTrue(entry.use_session)
+
+    def test_instagram_downloads_carry_the_same_decision(self) -> None:
+        client = self.create_test_client()
+
+        anonymous = client.post(
+            "/instagram/downloads?async=1", json={"url": "https://www.instagram.com/p/abc/"}
+        )
+        authorised = client.post(
+            "/instagram/downloads?async=1",
+            json={"url": "https://www.instagram.com/p/def/"},
+            headers={"X-API-Key": TEST_KEY},
+        )
+
+        store = self.app.state.download_store
+        self.assertFalse(store.get_entry(anonymous.json()["id"]).use_session)
+        self.assertTrue(store.get_entry(authorised.json()["id"]).use_session)
+
+    def test_the_worker_is_handed_the_decision_the_request_made(self) -> None:
+        """The fetch happens on another thread; the flag has to survive the trip."""
+        client = self.create_test_client()
+        seen: list[bool] = []
+
+        def recording_download(url: str, download_id: str | None = None, use_session: bool = True):
+            seen.append(use_session)
+            return None
+
+        self.app.state.post_download_service.download = recording_download
+
+        first = client.post("/downloads?async=1", json={"url": "https://www.tiktok.com/@a/video/1"})
+        self.app.state.download_job_service.wait(first.json()["id"], timeout=5)
+        second = client.post(
+            "/downloads?async=1",
+            json={"url": "https://www.tiktok.com/@a/video/2"},
+            headers={"X-API-Key": TEST_KEY},
+        )
+        self.app.state.download_job_service.wait(second.json()["id"], timeout=5)
+
+        self.assertEqual(seen, [False, True])
+
+    def test_check_live_is_open_and_passes_the_decision_down(self) -> None:
+        client = self.create_test_client()
+        seen: list[bool] = []
+
+        def fake_check(payload, use_session: bool = True):
+            seen.append(use_session)
+            from app.models.recording import LiveStatusResponse
+
+            return LiveStatusResponse(is_live=False, can_record=False, message="not live")
+
+        self.app.state.live_status_service.check = fake_check
+
+        self.assertEqual(client.post("/recordings/check-live", json={"username": "a"}).status_code, 200)
+        client.post(
+            "/recordings/check-live", json={"username": "a"}, headers={"X-API-Key": TEST_KEY}
+        )
+
+        self.assertEqual(seen, [False, True])
+
+    def test_starting_a_recording_is_open_and_gated_by_the_live_check(self) -> None:
+        """The vendor recorder reads a fixed cookie path, so the enforcement
+        point for recordings is the check that decides `can_record`."""
+        client = self.create_test_client()
+        seen: list[bool] = []
+
+        def fake_check(payload, use_session: bool = True):
+            seen.append(use_session)
+            from app.models.recording import LiveStatusResponse
+
+            return LiveStatusResponse(is_live=False, can_record=False, message="not live")
+
+        self.app.state.live_status_service.check = fake_check
+
+        response = client.post("/recordings", json={"username": "a"})
+
+        self.assertEqual(response.status_code, 400, "not live — but it reached the handler")
+        self.assertEqual(seen, [False])
+
+
 if __name__ == "__main__":
     unittest.main()

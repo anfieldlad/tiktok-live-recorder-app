@@ -26,7 +26,7 @@ class FakeDownloadService:
             raise ValueError("download URL must be a TikTok URL")
         return url.strip()
 
-    def download(self, url: str, download_id: str | None = None):
+    def download(self, url: str, download_id: str | None = None, use_session: bool = True):
         with self._lock:
             self.calls.append((url, download_id or ""))
         self.started.release()

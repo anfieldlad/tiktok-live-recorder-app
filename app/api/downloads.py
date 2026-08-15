@@ -15,6 +15,7 @@ from app.models.download import (
     DownloadStatus,
     display_path,
 )
+from app.api.security import session_allowed
 from app.services.post_download_service import PostDownloadResult
 
 
@@ -64,7 +65,9 @@ def create_download(
     """
     job_service = request.app.state.download_job_service
     try:
-        entry = job_service.submit(payload.url, DownloadPlatform.tiktok_post)
+        entry = job_service.submit(
+            payload.url, DownloadPlatform.tiktok_post, use_session=session_allowed(request)
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 

@@ -48,7 +48,7 @@ class DownloadApiTests(unittest.TestCase):
         about what the fetcher produced override this with their own fake.
         """
 
-        def nothing(url: str, download_id: str | None = None):
+        def nothing(url: str, download_id: str | None = None, use_session: bool = True):
             return None
 
         for service in (self.app.state.post_download_service, self.app.state.instagram_download_service):
@@ -151,7 +151,7 @@ class SynchronousDoorContractTests(DownloadApiTests):
 
         # Drive the real route, but with a fetcher that does nothing but write
         # the files a successful yt-dlp run would have left behind.
-        def fake_download(url: str, download_id: str | None = None):
+        def fake_download(url: str, download_id: str | None = None, use_session: bool = True):
             from app.services.post_download_service import PostDownloadResult
 
             return service.remember(
@@ -182,7 +182,7 @@ class SynchronousDoorContractTests(DownloadApiTests):
         client = self.create_test_client()
         service = self.app.state.post_download_service
 
-        def fake_download(url: str, download_id: str | None = None):
+        def fake_download(url: str, download_id: str | None = None, use_session: bool = True):
             raise RuntimeError("This post is no longer available on TikTok.")
 
         original = service.download

@@ -9,6 +9,7 @@ from typing import Callable, Iterator
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
+from app.api.security import session_allowed
 from app.models.recording import RecordingCreateRequest, normalize_username
 from app.services.url_guard import validate_tiktok_url
 
@@ -120,7 +121,8 @@ def stream_live(request: Request, username: str | None = None, url: str | None =
         # user was just shown cannot disagree.
         live_status_service = request.app.state.live_status_service
         info = live_status_service.resolve_stream_url(
-            RecordingCreateRequest(username=username, url=url)
+            RecordingCreateRequest(username=username, url=url),
+            use_session=session_allowed(request),
         )
         if info.get("error") or not info.get("live_url"):
             raise HTTPException(

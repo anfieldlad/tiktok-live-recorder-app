@@ -67,6 +67,10 @@ class DownloadEntry(BaseModel):
     output_dir: str = ""
     files: list[str] = Field(default_factory=list)
     error: Optional[str] = None
+    # Whether this job may run as the account holder. Decided on the request
+    # thread from the API key and carried here, because the fetch happens later
+    # on a worker thread where the request is long gone.
+    use_session: bool = True
     created_at: datetime = Field(default_factory=utc_now)
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None

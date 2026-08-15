@@ -88,7 +88,9 @@ class DownloadJobService:
             "queued_count": self._queue.qsize(),
         }
 
-    def submit(self, url: str, platform: DownloadPlatform) -> DownloadEntry:
+    def submit(
+        self, url: str, platform: DownloadPlatform, use_session: bool = True
+    ) -> DownloadEntry:
         """Persist a queued job and return at once.
 
         Validation happens here, on the request thread, so a link that is not a
@@ -102,6 +104,7 @@ class DownloadJobService:
             platform=platform,
             status=DownloadStatus.queued,
             url=normalized_url,
+            use_session=use_session,
         )
         self.download_store.save_entry(entry)
         with self._lock:
@@ -155,7 +158,7 @@ class DownloadJobService:
 
         try:
             service = self._services[entry.platform]
-            service.download(entry.url, download_id=download_id)
+            service.download(entry.url, download_id=download_id, use_session=entry.use_session)
         except Exception as exc:
             # ValueError (a bad URL) cannot reach here — submit() validated it —
             # so anything caught is a fetch failure and belongs on the card.

@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 from starlette.background import BackgroundTask
 
+from app.api.security import session_allowed
 from app.instagram.services.instagram_download_service import InstagramDownloadResult
 from app.models.download import (
     DownloadEntry,
@@ -52,7 +53,9 @@ def create_download(
     doors exist and when the synchronous one can go."""
     job_service = request.app.state.download_job_service
     try:
-        entry = job_service.submit(payload.url, DownloadPlatform.instagram)
+        entry = job_service.submit(
+            payload.url, DownloadPlatform.instagram, use_session=session_allowed(request)
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 

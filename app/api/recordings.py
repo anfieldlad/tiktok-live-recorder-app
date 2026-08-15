@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
+from app.api.security import session_allowed
 from app.models.recording import (
     LiveStatusResponse,
     RecordingActionResponse,
@@ -23,8 +24,12 @@ watch_router = APIRouter(prefix="/watch-recordings", tags=["watch-recordings"])
 def create_recording(request: Request, payload: RecordingCreateRequest) -> RecordingCreateResponse:
     recorder_service = request.app.state.recorder_service
     live_status_service = request.app.state.live_status_service
+    # The vendor recorder reads a fixed cookies.json path we cannot vary per
+    # request, so the enforcement point for a recording is this check: an
+    # anonymous caller resolves the room without the session, a restricted live
+    # comes back not-recordable, and the recorder is never started.
     try:
-        live_status = live_status_service.check(payload)
+        live_status = live_status_service.check(payload, use_session=session_allowed(request))
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     if not live_status.can_record:
@@ -40,7 +45,7 @@ def create_recording(request: Request, payload: RecordingCreateRequest) -> Recor
 def check_live_status(request: Request, payload: RecordingCreateRequest) -> LiveStatusResponse:
     live_status_service = request.app.state.live_status_service
     try:
-        return live_status_service.check(payload)
+        return live_status_service.check(payload, use_session=session_allowed(request))
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -111,6 +116,10 @@ def delete_recording(request: Request, job_id: str) -> RecordingActionResponse:
 
 @watch_router.post("", response_model=WatchJobResponse, status_code=status.HTTP_201_CREATED)
 def create_watch_recording(request: Request, payload: WatchCreateRequest) -> WatchJobResponse:
+    # Not gated on the key: a watch is a background loop that outlives its
+    # request by hours, and the recording it eventually starts goes through the
+    # same can_record check that /recordings does. Revisit if watches ever
+    # become expensive enough to be worth abusing.
     watch_service = request.app.state.watch_service
     try:
         job = watch_service.create_watch(payload)
