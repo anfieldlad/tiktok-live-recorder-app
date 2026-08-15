@@ -8,8 +8,14 @@
   --card:#fbf8f0; --card-edge:#efe8da;
 
   /* ink */
-  --ink:#221d17; --ink-soft:#4a4238; --dim:#7d7365;
-  --muted:#7d7365;              /* kept: older rules still reference it */
+  --ink:#221d17; --ink-soft:#4a4238; --dim:#635a4d;
+  /* --dim was #7d7365, which measured 3.22:1 on the board and 4.39:1 on card
+     — under WCAG AA either way, and it carries the smallest type in the app
+     (nav, labels, eyebrows). #635a4d is 4.68 / 6.38. */
+  --muted:#635a4d;              /* kept: older rules still reference it */
+  /* Placeholders stay a step lighter than labels so the hierarchy survives,
+     but at 5.02:1 rather than the old #b3a892 at 2.22:1. */
+  --placeholder:#736a5c;
   --rule:#cec4ad; --rule-soft:#e0d8c6;
   --line:#cec4ad; --line-strong:#b9ad92;
 
@@ -153,17 +159,19 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
 .title{font-family:var(--font-display);font-variation-settings:"opsz" 144,"SOFT" 40;font-weight:600;
        font-size:25px;line-height:1;letter-spacing:-.015em}
 .estd{font:400 10px/1 var(--font-mono);letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
-.session-state{margin-left:auto;background:none;border:0;cursor:pointer;padding:4px 0;
+.session-state{margin-left:auto;background:none;border:0;cursor:pointer;padding:17px 0;
                font:400 10px/1 var(--font-mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
 .session-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--filed);margin-right:7px}
 .session-dot.is-off{background:var(--pending)}
 .tabs{display:flex;align-items:flex-end;gap:0;margin-top:14px;flex-wrap:wrap}
-.tab{font:400 10px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
-     padding:9px 13px;text-decoration:none;position:relative;top:1px;border:1px solid transparent;border-bottom:none}
+/* 11px in a 44px-tall target: this is the app's primary navigation and it was
+   10px in a 29px box, under every touch-target guideline. */
+.tab{font:400 11px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+     padding:16px 14px;text-decoration:none;position:relative;top:1px;border:1px solid transparent;border-bottom:none}
 .tab:hover{color:var(--ink)}
 .tab.is-active{color:var(--ink);background:var(--card);border-color:var(--rule);box-shadow:0 -2px 0 var(--ink-2) inset}
-.tabs-note{margin-left:auto;font:400 9px/1 var(--font-mono);letter-spacing:.12em;color:var(--dim);
-           text-transform:uppercase;padding:9px 0}
+.tabs-note{margin-left:auto;font:400 10px/1 var(--font-mono);letter-spacing:.12em;color:var(--dim);
+           text-transform:uppercase;padding:16px 0;align-self:center}
 .footer{max-width:660px;margin:40px auto 30px;padding:14px 20px 0;border-top:1px solid var(--rule);
         display:flex;gap:18px;flex-wrap:wrap;font:400 10px/1.6 var(--font-mono);letter-spacing:.1em;
         color:var(--dim);text-transform:uppercase}
@@ -176,14 +184,24 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
    colliding with the active tab's open bottom edge and detaching it from the
    rule it is drawn to sit on. Lift it above the strip instead. */
 @media (max-width:620px){
-  .tabs-note{order:-1;margin-left:0;width:100%;padding:0 0 9px}
+  /* Three equal columns, so the strip can never wrap however wide the labels
+     get. Flex let "Save post" drop to its own line once the tabs grew to a
+     44px target. Tracking eases off to buy the room rather than the type size,
+     which is what actually has to stay legible. */
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr)}
+  .tab{padding:16px 2px;text-align:center;letter-spacing:.06em}
+
+  /* The note is a qualifier for two of the three tabs, and on a phone it costs
+     a whole row to say what those two pages already say in their own eyebrow
+     ("Entry — standing order · TikTok"). Nothing is lost by dropping it here. */
+  .tabs-note{display:none}
 
   /* Give the brand the whole first row so the subtitle and the session state
      share the second, rather than each claiming a line. At full size the pair
      needs ~351px and overflows a 360px phone, so the subtitle sets a shade
      tighter here — still the same face and colour, just less tracking. */
   .brand{flex-basis:100%}
-  .estd{font-size:9px;letter-spacing:.09em}
+  .estd{font-size:10px;letter-spacing:.06em}
   .session-state{white-space:nowrap}
 
   /* The footer's margin-left:auto only reads as "far end of the rule" while
@@ -203,14 +221,18 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
 .sheet::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ink-2)}
 .eyebrow{font:400 10px/1 var(--font-mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
 .sheet h1{font-variation-settings:"opsz" 144,"SOFT" 30;font-weight:300;font-size:40px;line-height:1.02;
-          letter-spacing:-.022em;margin:10px 0 6px}
-.lede{font:400 15px/1.55 var(--font-ui);color:var(--ink-soft);max-width:46ch;margin:0}
+          letter-spacing:-.022em;margin:10px 0 14px}
+/* 66ch is the sheet's own content width at this size, so the lede now fills
+   the column like the headline above it. The cap still guards a wider sheet:
+   66ch sits inside the readable 45-75ch measure. It used to be 46ch, which
+   wrapped a single-sentence subtitle onto two ragged lines. */
+.lede{font:400 15px/1.55 var(--font-ui);color:var(--ink-soft);max-width:66ch;margin:0}
 .field{margin-top:20px}
 .field label{display:block;font:400 10px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;
              color:var(--dim);margin-bottom:7px}
 .field input{width:100%;background:transparent;border:0;border-bottom:1.5px solid var(--rule);
              font:400 15px/1.5 var(--font-mono);color:var(--ink);padding:8px 2px;transition:border-color .18s}
-.field input::placeholder{color:#b3a892}
+.field input::placeholder{color:var(--placeholder)}
 .field input:focus{outline:none;border-bottom-color:var(--ink-2)}
 .row{display:flex;align-items:center;gap:14px;margin-top:22px;flex-wrap:wrap}
 /* the helper-action row is empty until there is something to offer */

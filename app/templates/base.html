@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Newsreader:opsz,wght@6..72,300..500&family=Cutive+Mono&display=swap">
-  <link rel="stylesheet" href="{{ (base_path or '') ~ '/static/css/app.css?v=15' }}">
+  <link rel="stylesheet" href="{{ (base_path or '') ~ '/static/css/app.css?v=18' }}">
 </head>
 <body>
   <div class="wrap">
@@ -44,7 +44,7 @@
         </div>
         <section class="session-section">
           <h3>Server key</h3>
-          <p class="muted">Needed to change the sessions below, or to save a post as the signed-in account. Without it, public posts still work.</p>
+          <p class="muted">Needed to change the sessions below, or to save as the signed-in account. Public posts work without it.</p>
           <form id="api-key-form" class="form">
             <div class="field">
               <label for="api-key">API key</label>
@@ -79,9 +79,9 @@
       basePath: {{ base_path|tojson }}
     };
   </script>
-  <script src="{{ (base_path or '') ~ '/static/js/app-common.js?v=4' }}"></script>
-  <script src="{{ (base_path or '') ~ '/static/js/session-panel.js?v=4' }}"></script>
-  <script src="{{ (base_path or '') ~ '/static/js/ig-session-panel.js?v=3' }}"></script>
+  <script src="{{ (base_path or '') ~ '/static/js/app-common.js?v=5' }}"></script>
+  <script src="{{ (base_path or '') ~ '/static/js/session-panel.js?v=5' }}"></script>
+  <script src="{{ (base_path or '') ~ '/static/js/ig-session-panel.js?v=4' }}"></script>
   <script>initSessionPanel(); initIgSessionPanel();</script>
   {% block page_scripts %}{% endblock %}
 </body>
