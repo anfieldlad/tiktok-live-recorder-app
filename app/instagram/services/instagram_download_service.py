@@ -82,13 +82,15 @@ class InstagramDownloadService:
             raise ValueError("download URL must be an Instagram URL")
         return normalized
 
-    def download(self, url: str, download_id: str | None = None) -> InstagramDownloadResult:
+    def download(
+        self, url: str, download_id: str | None = None, use_session: bool = True
+    ) -> InstagramDownloadResult:
         normalized_url = self.validate_url(url)
         download_id = download_id or new_download_id()
         download_dir = self.output_dir / download_id
         download_dir.mkdir(parents=True, exist_ok=False)
 
-        cookie_file = self._write_cookie_file()
+        cookie_file = self._write_cookie_file(use_session=use_session)
         try:
             # Run the best engine for this URL first, then fall back to the other.
             # Reels are single videos where yt-dlp is strongest; posts, carousels,
@@ -244,7 +246,9 @@ class InstagramDownloadService:
             return default
         return lines[-1]
 
-    def _write_cookie_file(self) -> Path | None:
-        if self.cookie_service is None:
+    def _write_cookie_file(self, use_session: bool = True) -> Path | None:
+        # See PostDownloadService: an anonymous caller runs cookie-less, which
+        # is the same branch as having no session saved at all.
+        if not use_session or self.cookie_service is None:
             return None
         return self.cookie_service.write_netscape_cookie_file()

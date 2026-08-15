@@ -4,7 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from app.instagram.services.instagram_cookie_service import InstagramCookieService
+from app.instagram.services.instagram_download_service import InstagramDownloadService
 from app.models.download import DownloadEntry, DownloadPlatform, DownloadStatus
+from app.services.cookie_service import CookieService
 from app.services.download_store import DownloadStore
 from app.services.post_download_service import (
     PostDownloadResult,
@@ -149,3 +152,47 @@ class DownloadIdOwnershipTests(unittest.TestCase):
             )
 
             self.assertEqual(store.get_entry("20260815-101500-def456").status, DownloadStatus.finished)
+
+
+class CookielessFetchTests(unittest.TestCase):
+    """Without the key a fetch still runs — it just runs as nobody."""
+
+    def build(self, temp_dir: str) -> PostDownloadService:
+        root = Path(temp_dir)
+        cookies_file = root / "cookies.json"
+        cookies_file.write_text('{"sessionid": "secret-value"}', encoding="utf-8")
+        return PostDownloadService(root / "output", cookie_service=CookieService(cookies_file))
+
+    def test_a_session_request_writes_a_cookie_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = self.build(temp_dir)
+
+            cookie_file = service._write_cookie_file(use_session=True)
+
+            self.assertIsNotNone(cookie_file)
+            self.assertIn("secret-value", cookie_file.read_text(encoding="utf-8"))
+            cookie_file.unlink(missing_ok=True)
+
+    def test_an_anonymous_request_writes_no_cookie_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = self.build(temp_dir)
+
+            self.assertIsNone(service._write_cookie_file(use_session=False))
+
+    def test_instagram_does_the_same(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            cookies_file = root / "instagram_cookies.json"
+            cookies_file.write_text('{"sessionid": "secret-value"}', encoding="utf-8")
+            service = InstagramDownloadService(
+                root / "output", cookie_service=InstagramCookieService(cookies_file)
+            )
+
+            self.assertIsNone(service._write_cookie_file(use_session=False))
+
+    def test_the_room_lookup_can_be_told_to_skip_the_cookie_jar(self) -> None:
+        """The vendor recorder reads a fixed cookies.json; this script is ours,
+        so it is the one place the decision can be honoured."""
+        from app.services.live_status_service import _ROOM_LOOKUP_SCRIPT
+
+        self.assertIn('payload.get("use_session", True)', _ROOM_LOOKUP_SCRIPT)

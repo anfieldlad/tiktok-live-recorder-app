@@ -135,7 +135,9 @@ class PostDownloadService:
     def validate_url(self, url: str) -> str:
         return validate_tiktok_url(url, label="download URL")
 
-    def download(self, url: str, download_id: str | None = None) -> PostDownloadResult:
+    def download(
+        self, url: str, download_id: str | None = None, use_session: bool = True
+    ) -> PostDownloadResult:
         normalized_url = self.validate_url(url)
         download_id = download_id or new_download_id()
         download_dir = self.output_dir / download_id
@@ -159,7 +161,7 @@ class PostDownloadService:
             "%(title).80s-%(id)s.%(ext)s",
             normalized_url,
         ]
-        cookie_file = self._write_cookie_file()
+        cookie_file = self._write_cookie_file(use_session=use_session)
         if cookie_file:
             command[3:3] = ["--cookies", str(cookie_file)]
 
@@ -329,7 +331,11 @@ class PostDownloadService:
             return ".jpg" if suffix == ".jpeg" else suffix
         return default
 
-    def _write_cookie_file(self) -> Path | None:
+    def _write_cookie_file(self, use_session: bool = True) -> Path | None:
+        # An unauthenticated caller reaches public posts only. This is not a
+        # special path — it is the same branch taken when no session is saved.
+        if not use_session:
+            return None
         if self.cookie_service is None or not self.cookie_service.is_configured():
             return None
 

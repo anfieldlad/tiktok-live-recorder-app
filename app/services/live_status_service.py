@@ -25,7 +25,8 @@ from core.tiktok_api import TikTokAPI
 from utils.utils import read_cookies
 
 payload = json.loads(sys.argv[1])
-api = TikTokAPI(proxy=None, cookies=read_cookies())
+cookies = read_cookies() if payload.get("use_session", True) else {}
+api = TikTokAPI(proxy=None, cookies=cookies)
 
 username = payload.get("username")
 url = payload.get("url")
@@ -56,8 +57,10 @@ class LiveStatusService:
         self.settings = settings
         self.cookie_service = cookie_service
 
-    def check(self, payload: RecordingCreateRequest) -> LiveStatusResponse:
-        lookup = self._lookup_room(payload)
+    def check(
+        self, payload: RecordingCreateRequest, use_session: bool = True
+    ) -> LiveStatusResponse:
+        lookup = self._lookup_room(payload, use_session=use_session)
         room_id = lookup.get("room_id")
         username = lookup.get("username") or payload.username
 
@@ -72,7 +75,7 @@ class LiveStatusService:
             )
 
         try:
-            resolved = resolve_live_stream(str(room_id), self._cookies())
+            resolved = resolve_live_stream(str(room_id), self._cookies(use_session=use_session))
         except Exception as exc:  # network/HTTP failure talking to TikTok
             return LiveStatusResponse(
                 username=username,
@@ -94,14 +97,16 @@ class LiveStatusService:
             message=self._normalize_message(message),
         )
 
-    def resolve_stream_url(self, payload: RecordingCreateRequest) -> dict:
+    def resolve_stream_url(
+        self, payload: RecordingCreateRequest, use_session: bool = True
+    ) -> dict:
         """Room id plus a usable stream URL, for the live relay."""
-        lookup = self._lookup_room(payload)
+        lookup = self._lookup_room(payload, use_session=use_session)
         room_id = lookup.get("room_id")
         if not room_id:
             return {"error": self._normalize_message(lookup.get("message", "")), "username": lookup.get("username")}
 
-        resolved = resolve_live_stream(str(room_id), self._cookies())
+        resolved = resolve_live_stream(str(room_id), self._cookies(use_session=use_session))
         if not resolved["live_url"]:
             return {
                 "error": self._normalize_message(resolved["message"] or "the live stream is not available"),
@@ -115,15 +120,15 @@ class LiveStatusService:
             "error": None,
         }
 
-    def _cookies(self) -> dict[str, str]:
-        if self.cookie_service is None:
+    def _cookies(self, use_session: bool = True) -> dict[str, str]:
+        if not use_session or self.cookie_service is None:
             return {}
         try:
             return {str(name): str(value) for name, value in self.cookie_service.read_cookies().items() if value}
         except Exception:  # a broken cookie file should not break the check
             return {}
 
-    def _lookup_room(self, payload: RecordingCreateRequest) -> dict:
+    def _lookup_room(self, payload: RecordingCreateRequest, use_session: bool = True) -> dict:
         try:
             completed = subprocess.run(
                 [
@@ -134,6 +139,7 @@ class LiveStatusService:
                         {
                             "username": payload.username,
                             "url": str(payload.url) if payload.url else None,
+                            "use_session": use_session,
                         }
                     ),
                 ],
