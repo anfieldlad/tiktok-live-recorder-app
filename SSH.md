@@ -202,6 +202,21 @@ is rolled out and old installs are drained, delete both `/tiktok` blocks above a
 reload nginx. Nothing else references the prefix — the app, its links and its
 payloads are already fully on `/stillhere`.
 
+### Retiring the synchronous download door
+
+`POST /downloads` and `POST /instagram/downloads` without `?async=1` submit a job
+and hold the connection open until it finishes. That exists only because the
+shipped Android build (`com.ttldownloader.app`, versionCode 5) posts and waits.
+
+**Delete both synchronous branches once Still Here mobile ships against the
+async door** — same trigger as the `/tiktok` prefix above, and worth doing in the
+same change.
+
+Until then, `/stillhere/` and `/tiktok/` need `proxy_read_timeout` raised: nginx
+defaults to 60 seconds, so any download slower than that already 504s and reads
+to the user as a download failure. The pattern is in the `/breaking-bad/` block
+on the same box, which sets `proxy_read_timeout 86400`.
+
 ### Common nginx commands
 
 ```bash
