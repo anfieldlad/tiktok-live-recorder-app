@@ -4,8 +4,6 @@
 <section class="sheet rise d1">
   <div class="eyebrow">Entry — saved post</div>
   <h1>Save a post<br>before it’s gone</h1>
-  <p class="lede">Paste as many links as you like. Two fetch at once; the rest wait.</p>
-
   <form id="post-download-form" class="form">
     <div class="field">
       <label for="post-url">Link — TikTok or Instagram</label>
@@ -24,6 +22,6 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=3' }}"></script>
+<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=4' }}"></script>
 <script>initSavePage();</script>
 {% endblock %}

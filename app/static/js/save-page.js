@@ -64,12 +64,13 @@ function initSavePage() {
     return { label: "Filed", cls: "good" };
   }
 
+  // The card's job is to answer "which post is this?", not "what is the
+  // server doing?" — the stamp already says that. So the title is the link the
+  // user pasted, stripped of the noise they did not type.
   function titleFor(entry) {
-    if (entry.status === "queued") return "Waiting for a slot";
-    if (entry.status === "running") return "Working…";
-    if (entry.status === "failed") return "Could not be filed";
-    const count = (entry.files || []).length;
-    return `${count} file${count === 1 ? "" : "s"} filed`;
+    const url = String(entry.url ?? "").replace(/^https?:\/\//, "").replace(/^www\./, "");
+    if (!url) return "—";
+    return url.length > 48 ? `${url.slice(0, 47)}…` : url;
   }
 
   function retentionNote(entry) {
@@ -99,13 +100,11 @@ function initSavePage() {
 
     const zip = entry.zip_url
       ? `<a class="btn btn-sm btn-quiet" href="${appPath(entry.zip_url)}">Take all as zip</a>` : "";
+    // Only a failure needs words. Queued and working are what the stamp says,
+    // and how many downloads run at once is not the reader's problem.
     const message = entry.status === "failed"
-      ? `<p class="job-message">${escapeHtml(entry.error || "The download failed.")}</p>`
-      : entry.status === "running"
-        ? `<p class="job-message">Fetching from ${isInstagram(entry) ? "Instagram" : "TikTok"}.</p>`
-        : entry.status === "queued"
-          ? `<p class="job-message">Two run at a time.</p>`
-          : "";
+      ? `<p class="job-message">${escapeHtml(entry.error || "Could not be saved.")}</p>`
+      : "";
     const note = retentionNote(entry);
 
     return `
