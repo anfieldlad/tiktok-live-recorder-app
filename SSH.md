@@ -217,6 +217,30 @@ defaults to 60 seconds, so any download slower than that already 504s and reads
 to the user as a download failure. The pattern is in the `/breaking-bad/` block
 on the same box, which sets `proxy_read_timeout 86400`.
 
+### Turning on the API key
+
+Enforcement is off while `API_KEY` is unset, so the switch is the env var, not
+the deploy. **Do these in order** — step 2 before step 3, or the Android app
+starts failing session-backed fetches the moment the server restarts.
+
+1. Generate a key: `openssl rand -hex 32`
+2. Paste it into Android → Settings → API key, and confirm the app still works
+   against the still-unenforcing server.
+3. Add `API_KEY=…` to `/opt/ttl-downloader/.env`.
+4. Deploy and `sudo systemctl restart ttl-downloader`. Enforcement begins the
+   moment the env var is present.
+5. Paste the key into the web UI: Sessions → Server key.
+6. Verify: Tier 1 (`POST /auth/tiktok-cookies`) is 401 without the header and
+   200 with it; Tier 2 (`POST /downloads`) succeeds both ways but only reaches
+   private content with the key; Tier 3 (pages, `/health`, listings) is
+   untouched.
+
+**Rollback:** remove `API_KEY` from `.env` and restart. No code change.
+
+**Deliberately still open** — chosen after being shown the consequences, not
+oversights: every `DELETE` route, the register listings, and all media file
+URLs. There is no rate limit and no disk quota.
+
 ### Common nginx commands
 
 ```bash
