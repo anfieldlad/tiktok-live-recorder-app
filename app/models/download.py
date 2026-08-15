@@ -74,3 +74,52 @@ class DownloadEntry(BaseModel):
 
     def is_terminal(self) -> bool:
         return self.status in {DownloadStatus.finished, DownloadStatus.failed}
+
+
+class DownloadJobResponse(BaseModel):
+    """One row of the register, whatever state it is in.
+
+    Deliberately separate from the synchronous PostDownloadCreateResponse: that
+    payload is a contract with a shipped Android build and must not grow fields.
+    """
+
+    id: str
+    platform: DownloadPlatform
+    status: DownloadStatus
+    url: Optional[str]
+    error: Optional[str]
+    output_dir: str
+    files: list[str]
+    file_urls: list[str]
+    zip_url: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime]
+    finished_at: Optional[datetime]
+    fetched_at: Optional[datetime]
+
+    @classmethod
+    def from_entry(cls, entry: DownloadEntry) -> "DownloadJobResponse":
+        base = (
+            "/instagram/downloads"
+            if entry.platform == DownloadPlatform.instagram
+            else "/downloads"
+        )
+        return cls(
+            id=entry.id,
+            platform=entry.platform,
+            status=entry.status,
+            url=entry.url,
+            error=entry.error,
+            output_dir=display_path(entry.output_dir) if entry.output_dir else "",
+            files=[display_path(path) for path in entry.files],
+            file_urls=[f"{base}/{entry.id}/files/{index}" for index, _ in enumerate(entry.files)],
+            zip_url=(
+                f"{base}/{entry.id}/zip"
+                if entry.platform == DownloadPlatform.instagram and entry.files
+                else None
+            ),
+            created_at=entry.created_at,
+            started_at=entry.started_at,
+            finished_at=entry.finished_at,
+            fetched_at=entry.fetched_at,
+        )

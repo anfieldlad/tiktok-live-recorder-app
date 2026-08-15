@@ -3,13 +3,19 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 from starlette.background import BackgroundTask
 
 from app.instagram.services.instagram_download_service import InstagramDownloadResult
-from app.services.config import PROJECT_ROOT
+from app.models.download import (
+    DownloadEntry,
+    DownloadJobResponse,
+    DownloadPlatform,
+    DownloadStatus,
+    display_path,
+)
 
 
 router = APIRouter(prefix="/instagram/downloads", tags=["instagram-downloads"])
@@ -36,17 +42,25 @@ class InstagramDownloadResponse(BaseModel):
     zip_url: str
 
 
-@router.post("", response_model=InstagramDownloadResponse, status_code=status.HTTP_201_CREATED)
-def create_download(request: Request, payload: InstagramDownloadCreateRequest) -> InstagramDownloadResponse:
-    instagram_download_service = request.app.state.instagram_download_service
+@router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
+def create_download(
+    request: Request,
+    payload: InstagramDownloadCreateRequest,
+    background: bool = Query(default=False, alias="async"),
+) -> InstagramDownloadResponse | DownloadJobResponse:
+    """Mirrors the TikTok door exactly. See app/api/downloads.py for why both
+    doors exist and when the synchronous one can go."""
+    job_service = request.app.state.download_job_service
     try:
-        result = instagram_download_service.download(payload.url)
+        entry = job_service.submit(payload.url, DownloadPlatform.instagram)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
-    return _to_response(result)
+    if background:
+        return DownloadJobResponse.from_entry(entry)
+
+    finished = job_service.wait(entry.id)
+    return _synchronous_response(finished)
 
 
 @router.get("/{download_id}", response_model=InstagramDownloadResponse)
@@ -101,9 +115,32 @@ def delete_download(request: Request, download_id: str) -> dict[str, bool]:
     entry = store.get_entry(download_id)
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="download not found")
-    shutil.rmtree(Path(entry.output_dir), ignore_errors=True)
+    if entry.output_dir:
+        shutil.rmtree(Path(entry.output_dir), ignore_errors=True)
     store.delete_entry(download_id)
     return {"deleted": True}
+
+
+def _synchronous_response(entry: DownloadEntry | None) -> InstagramDownloadResponse:
+    """The exact payload the shipped Android build parses. Do not add fields."""
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="the download disappeared"
+        )
+    if entry.status != DownloadStatus.finished:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=entry.error or "the download failed"
+        )
+    return InstagramDownloadResponse(
+        status="finished",
+        download_id=entry.id,
+        output_dir=display_path(entry.output_dir),
+        files=[display_path(path) for path in entry.files],
+        file_urls=[
+            f"/instagram/downloads/{entry.id}/files/{index}" for index, _ in enumerate(entry.files)
+        ],
+        zip_url=f"/instagram/downloads/{entry.id}/zip",
+    )
 
 
 def _remove_archive_and_stamp(request: Request, download_id: str, archive_path: Path) -> None:
@@ -117,16 +154,8 @@ def _to_response(result: InstagramDownloadResult) -> InstagramDownloadResponse:
     return InstagramDownloadResponse(
         status="finished",
         download_id=result.download_id,
-        output_dir=_display_path(result.output_dir),
-        files=[_display_path(file_path) for file_path in result.files],
+        output_dir=display_path(result.output_dir),
+        files=[display_path(file_path) for file_path in result.files],
         file_urls=[f"/instagram/downloads/{result.download_id}/files/{index}" for index, _ in enumerate(result.files)],
         zip_url=f"/instagram/downloads/{result.download_id}/zip",
     )
-
-
-def _display_path(path: Path) -> str:
-    resolved = path.resolve()
-    try:
-        return str(resolved.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(resolved)

@@ -21,6 +21,7 @@ from app.services.browser_login_service import BrowserLoginService
 from app.services.cleanup_service import CleanupService
 from app.services.config import PROJECT_ROOT, get_settings
 from app.services.cookie_service import CookieService
+from app.services.download_job_service import DownloadJobService
 from app.services.download_store import DownloadStore
 from app.services.file_service import FileService
 from app.services.job_store import JobStore
@@ -56,6 +57,16 @@ def create_app() -> FastAPI:
     instagram_browser_login_service = InstagramBrowserLoginService(settings.jobs_file.parents[1], instagram_cookie_service)
     instagram_download_service = InstagramDownloadService(
         settings.output_dir, instagram_cookie_service, download_store
+    )
+    # Anything still marked queued or running belongs to a process that is gone.
+    orphaned = download_store.fail_orphaned_jobs()
+    if orphaned:
+        logging.getLogger(__name__).info("Failed %s download(s) orphaned by a restart", orphaned)
+    download_job_service = DownloadJobService(
+        download_store,
+        post_download_service,
+        instagram_download_service,
+        max_workers=settings.max_concurrent_downloads,
     )
     retention_policy = RetentionPolicy.from_settings(settings)
     cleanup_service = CleanupService(settings, job_store, download_store, retention_policy)
@@ -95,6 +106,7 @@ def create_app() -> FastAPI:
     app.state.instagram_download_service = instagram_download_service
     app.state.watch_service = watch_service
     app.state.download_store = download_store
+    app.state.download_job_service = download_job_service
     app.state.cleanup_service = cleanup_service
     app.state.templates = templates
 
@@ -209,6 +221,7 @@ def create_app() -> FastAPI:
             "services": {
                 "recorder": recorder_service.diagnostics(),
                 "watch": watch_service.diagnostics(),
+                "downloads": download_job_service.diagnostics(),
                 "cleanup": cleanup_service.diagnostics(),
             },
             "stores": {
