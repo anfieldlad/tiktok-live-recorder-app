@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # One per core on a 1.9 GB box. Chosen over 3 because ffmpeg may sit behind
     # a fetch, and this VPS has prior form for resource exhaustion.
     max_concurrent_downloads: int = 2
+    # Empty means enforcement is off entirely: the server behaves exactly as it
+    # did before the key existed. Set API_KEY in .env to turn it on; unset it to
+    # roll back without a code change.
+    api_key: str = ""
 
     @property
     def is_production(self) -> bool:

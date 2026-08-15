@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
+
+from app.api.security import require_key, session_allowed
 
 
 router = APIRouter(prefix="/instagram/auth", tags=["instagram-auth"])
@@ -21,7 +23,10 @@ class InstagramCookieRequest(BaseModel):
 
 class InstagramCookieStatusResponse(BaseModel):
     configured: bool
-    cookie_file: str
+    # See TikTokCookieStatusResponse: a path is not an anonymous caller's
+    # business, and `session_allowed` is the field the UI needs.
+    cookie_file: str | None = None
+    session_allowed: bool = True
 
 
 class InstagramBrowserLoginStatusResponse(BaseModel):
@@ -34,15 +39,22 @@ class InstagramBrowserLoginStatusResponse(BaseModel):
 
 @router.get("/status", response_model=InstagramCookieStatusResponse)
 def get_auth_status(request: Request) -> InstagramCookieStatusResponse:
+    """Open on purpose, so the Sessions drawer renders for anyone."""
     cookie_service = request.app.state.instagram_cookie_service
     settings = request.app.state.settings
+    allowed = session_allowed(request)
     return InstagramCookieStatusResponse(
         configured=cookie_service.is_configured(),
-        cookie_file=str(settings.instagram_cookies_file.resolve()),
+        cookie_file=str(settings.instagram_cookies_file.resolve()) if allowed else None,
+        session_allowed=allowed,
     )
 
 
-@router.post("/cookies", response_model=InstagramCookieStatusResponse)
+@router.post(
+    "/cookies",
+    response_model=InstagramCookieStatusResponse,
+    dependencies=[Depends(require_key)],
+)
 def save_instagram_cookies(request: Request, payload: InstagramCookieRequest) -> InstagramCookieStatusResponse:
     cookie_service = request.app.state.instagram_cookie_service
     settings = request.app.state.settings
@@ -53,7 +65,11 @@ def save_instagram_cookies(request: Request, payload: InstagramCookieRequest) ->
     )
 
 
-@router.post("/import-browser/{browser_name}", response_model=InstagramCookieStatusResponse)
+@router.post(
+    "/import-browser/{browser_name}",
+    response_model=InstagramCookieStatusResponse,
+    dependencies=[Depends(require_key)],
+)
 def import_instagram_cookies_from_browser(request: Request, browser_name: str) -> InstagramCookieStatusResponse:
     cookie_service = request.app.state.instagram_cookie_service
     settings = request.app.state.settings
@@ -72,7 +88,11 @@ def import_instagram_cookies_from_browser(request: Request, browser_name: str) -
     )
 
 
-@router.delete("/cookies", response_model=InstagramCookieStatusResponse)
+@router.delete(
+    "/cookies",
+    response_model=InstagramCookieStatusResponse,
+    dependencies=[Depends(require_key)],
+)
 def clear_instagram_cookies(request: Request) -> InstagramCookieStatusResponse:
     cookie_service = request.app.state.instagram_cookie_service
     settings = request.app.state.settings
@@ -89,7 +109,11 @@ def get_browser_login_status(request: Request) -> InstagramBrowserLoginStatusRes
     return InstagramBrowserLoginStatusResponse(**browser_login_service.status())
 
 
-@router.post("/login-browser/{browser_name}/start", response_model=InstagramBrowserLoginStatusResponse)
+@router.post(
+    "/login-browser/{browser_name}/start",
+    response_model=InstagramBrowserLoginStatusResponse,
+    dependencies=[Depends(require_key)],
+)
 def start_browser_login(request: Request, browser_name: str) -> InstagramBrowserLoginStatusResponse:
     browser_login_service = request.app.state.instagram_browser_login_service
     try:
@@ -104,7 +128,11 @@ def start_browser_login(request: Request, browser_name: str) -> InstagramBrowser
     return InstagramBrowserLoginStatusResponse(**result)
 
 
-@router.post("/login-browser/capture", response_model=InstagramBrowserLoginStatusResponse)
+@router.post(
+    "/login-browser/capture",
+    response_model=InstagramBrowserLoginStatusResponse,
+    dependencies=[Depends(require_key)],
+)
 def capture_browser_login(request: Request) -> InstagramBrowserLoginStatusResponse:
     browser_login_service = request.app.state.instagram_browser_login_service
     try:
@@ -119,7 +147,11 @@ def capture_browser_login(request: Request) -> InstagramBrowserLoginStatusRespon
     return InstagramBrowserLoginStatusResponse(**result)
 
 
-@router.post("/login-browser/close", response_model=InstagramBrowserLoginStatusResponse)
+@router.post(
+    "/login-browser/close",
+    response_model=InstagramBrowserLoginStatusResponse,
+    dependencies=[Depends(require_key)],
+)
 def close_browser_login(request: Request) -> InstagramBrowserLoginStatusResponse:
     browser_login_service = request.app.state.instagram_browser_login_service
     return InstagramBrowserLoginStatusResponse(**browser_login_service.close())

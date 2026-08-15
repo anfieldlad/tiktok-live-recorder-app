@@ -293,7 +293,12 @@ class TikTokCookieRequest(BaseModel):
 
 class TikTokCookieStatusResponse(BaseModel):
     configured: bool
-    cookie_file: str
+    # None for an unauthenticated caller: this is a filesystem path, and
+    # /health/details already redacts those in production. `session_allowed` is
+    # what the UI actually needs — whether this caller may *use* the session,
+    # not merely whether one exists.
+    cookie_file: Optional[str] = None
+    session_allowed: bool = True
 
 
 class TikTokBrowserLoginStatusResponse(BaseModel):
