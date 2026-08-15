@@ -138,7 +138,7 @@ function initRecordPage() {
     consecutivePollFailures += 1;
     if (consecutivePollFailures < POLL_FAILURES_BEFORE_WARNING) return;
     pollWarningShown = true;
-    setNotice(recordNotice, "Lost connection to the app — still retrying…", "error");
+    setNotice(recordNotice, "Lost connection — retrying…", "error");
   }
 
   function pollOnce(load) {
@@ -147,7 +147,7 @@ function initRecordPage() {
 
   async function fetchRecordings() {
     const response = await apiFetch("/recordings");
-    if (!response.ok) throw new Error(`Failed to load recordings: ${response.status}`);
+    if (!response.ok) throw new Error(`Could not load the register: ${response.status}`);
     renderJobs(await response.json());
   }
 
@@ -158,13 +158,13 @@ function initRecordPage() {
     const duration = document.getElementById("record-duration").value.trim();
     clearRecordHelperActions();
     if (!payload.username && !payload.url) {
-      setNotice(recordNotice, "Please enter a TikTok username or live URL.", "error");
+      setNotice(recordNotice, "Enter a username or live URL.", "error");
       return;
     }
-    setNotice(recordNotice, "Checking the account and starting the recording...");
+    setNotice(recordNotice, "Checking the account…");
     try {
       const response = await apiFetch("/recordings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error(await readApiError(response, "Couldn't start the recording."));
+      if (!response.ok) throw new Error(await readApiError(response, "Couldn't begin the capture."));
       const body = await response.json();
       setNotice(recordNotice, `Recording started. Job ID: ${body.id}`, "success");
       recordForm.reset();
@@ -182,10 +182,11 @@ function initRecordPage() {
     const jobId = button.dataset.id;
     button.disabled = true;
     try {
-      const response = await fetch(action === "stop" ? appPath(`/recordings/${jobId}/stop`) : appPath(`/recordings/${jobId}`), { method: action === "stop" ? "POST" : "DELETE" });
-      if (!response.ok) throw new Error(await readApiError(response, "The action could not be completed."));
+      const path = action === "stop" ? `/recordings/${jobId}/stop` : `/recordings/${jobId}`;
+      const response = await apiFetch(path, { method: action === "stop" ? "POST" : "DELETE" });
+      if (!response.ok) throw new Error(await readApiError(response, "That didn't go through."));
       await response.json();
-      setNotice(recordNotice, "Recording updated.", "success");
+      setNotice(recordNotice, "Capture updated.", "success");
       clearRecordHelperActions();
       await fetchRecordings();
     } catch (error) { setNotice(recordNotice, error.message, "error"); }
@@ -201,7 +202,7 @@ function initRecordPage() {
   }
 
   recordForm.addEventListener("submit", submitRecording);
-  clearRecordFormButton.addEventListener("click", () => { recordForm.reset(); clearRecordHelperActions(); setNotice(recordNotice, "Record form cleared."); });
+  clearRecordFormButton.addEventListener("click", () => { recordForm.reset(); clearRecordHelperActions(); setNotice(recordNotice, "Cleared."); });
   refreshRecordingsButton.addEventListener("click", () => {
     fetchRecordings().then(onPollSuccess, (error) => setNotice(recordNotice, error.message || "Could not reach the app.", "error"));
   });

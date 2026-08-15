@@ -24,7 +24,7 @@ function initIgSessionPanel() {
 
   async function refreshSessionStatus() {
     const [cookieResponse, loginResponse] = await Promise.all([apiFetch("/instagram/auth/status"), apiFetch("/instagram/auth/login-browser/status")]);
-    if (!cookieResponse.ok || !loginResponse.ok) throw new Error("Failed to load Instagram session status");
+    if (!cookieResponse.ok || !loginResponse.ok) throw new Error("Couldn't read the Instagram session.");
     const cookieBody = await cookieResponse.json();
     const loginBody = await loginResponse.json();
     setBrowserLoginControlsEnabled(loginBody.browser_launch_supported);
@@ -32,16 +32,16 @@ function initIgSessionPanel() {
     if (!sessionNotice) return;
     if (!cookieBody.session_allowed) setNotice(sessionNotice, "Add the server key above to use or change this session.");
     else if (cookieBody.configured) setNotice(sessionNotice, "Your Instagram session is ready.", "success");
-    else if (!loginBody.browser_launch_supported) setNotice(sessionNotice, "Guided Chrome or Edge login is available on Windows only. On this server, save sessionid manually or import cookies another way.");
-    else if (loginBody.browser_open) setNotice(sessionNotice, "The Instagram login window is open. Finish signing in there, then close it and click Capture session.");
-    else setNotice(sessionNotice, "No Instagram session is saved yet. You need this for stories, highlights, and most content.");
+    else if (!loginBody.browser_launch_supported) setNotice(sessionNotice, "Guided login is Windows-only. On this server, paste sessionid below.");
+    else if (loginBody.browser_open) setNotice(sessionNotice, "Login window open. Sign in, close it, then Capture session.");
+    else setNotice(sessionNotice, "No session saved. You need one for stories, highlights, and most posts.");
   }
 
   async function saveCookies(event) {
     event.preventDefault();
     const sessionInput = document.getElementById("ig-session-id");
     const sessionValue = sessionInput.value.trim();
-    if (!sessionValue) { setNotice(sessionNotice, "Please enter a sessionid value.", "error"); return; }
+    if (!sessionValue) { setNotice(sessionNotice, "Enter a sessionid value.", "error"); return; }
     try {
       const response = await apiFetch("/instagram/auth/cookies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionid: sessionValue }) });
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't save the Instagram session."));
@@ -66,7 +66,7 @@ function initIgSessionPanel() {
 
   async function importCookies(browserName) {
     try {
-      setNotice(sessionNotice, `Importing Instagram session from ${browserName}...`);
+      setNotice(sessionNotice, `Importing from ${browserName}…`);
       const response = await apiFetch(`/instagram/auth/import-browser/${browserName}`, { method: "POST" });
       if (!response.ok) throw new Error(await readApiError(response, `Couldn't import cookies from ${browserName}.`));
       await response.json();
@@ -77,7 +77,7 @@ function initIgSessionPanel() {
 
   async function startBrowserLogin(browserName) {
     try {
-      setNotice(sessionNotice, `Opening an Instagram login window in ${browserName}...`);
+      setNotice(sessionNotice, `Opening a login window in ${browserName}…`);
       const response = await apiFetch(`/instagram/auth/login-browser/${browserName}/start`, { method: "POST" });
       if (!response.ok) throw new Error(await readApiError(response, `Couldn't open the login browser in ${browserName}.`));
       await response.json();
@@ -88,7 +88,7 @@ function initIgSessionPanel() {
 
   async function captureBrowserLogin() {
     try {
-      setNotice(sessionNotice, "Capturing the Instagram session...");
+      setNotice(sessionNotice, "Capturing the Instagram session…");
       const response = await apiFetch("/instagram/auth/login-browser/capture", { method: "POST" });
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't capture the Instagram session."));
       await response.json();

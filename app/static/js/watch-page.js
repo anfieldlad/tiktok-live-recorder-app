@@ -85,8 +85,35 @@ function initWatchPage() {
 
   async function fetchWatchJobs() {
     const response = await apiFetch("/watch-recordings");
-    if (!response.ok) throw new Error(`Failed to load watch jobs: ${response.status}`);
+    if (!response.ok) throw new Error(`Could not load the register: ${response.status}`);
     renderWatchJobs(await response.json());
+  }
+
+  // A standing order changes state without the user touching anything, so this
+  // page has to refresh itself — it was the only one that did not. Same
+  // dropped-poll tolerance as the other two: one blip must never replace a real
+  // message with a raw network error.
+  const POLL_FAILURES_BEFORE_WARNING = 3;
+  let consecutivePollFailures = 0;
+  let pollWarningShown = false;
+
+  function onPollSuccess() {
+    consecutivePollFailures = 0;
+    if (pollWarningShown) {
+      pollWarningShown = false;
+      setNotice(watchNotice, "Reconnected.");
+    }
+  }
+
+  function onPollFailure() {
+    consecutivePollFailures += 1;
+    if (consecutivePollFailures < POLL_FAILURES_BEFORE_WARNING) return;
+    pollWarningShown = true;
+    setNotice(watchNotice, "Lost connection — retrying…", "error");
+  }
+
+  function pollOnce() {
+    return fetchWatchJobs().then(onPollSuccess, onPollFailure);
   }
 
   function hydrateFromQuery() {
@@ -95,22 +122,22 @@ function initWatchPage() {
     const duration = params.get("duration");
     if (source) document.getElementById("watch-source").value = source;
     if (duration) document.getElementById("watch-duration").value = duration;
-    if (source) setNotice(watchNotice, "The creator is offline right now. You can start an auto-record here instead.");
+    if (source) setNotice(watchNotice, "They\u2019re offline. Place the order and it starts by itself.");
   }
 
   async function submitWatch(event) {
     event.preventDefault();
     const payload = buildSourcePayload();
     if (!payload.username && !payload.url) {
-      setNotice(watchNotice, "Please enter a TikTok username or live URL.", "error");
+      setNotice(watchNotice, "Enter a username or live URL.", "error");
       return;
     }
-    setNotice(watchNotice, "Creating a watch and checking the account...");
+    setNotice(watchNotice, "Placing the order…");
     try {
       const response = await apiFetch("/watch-recordings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error(await readApiError(response, "Couldn't create the watch."));
+      if (!response.ok) throw new Error(await readApiError(response, "Couldn't place the order."));
       await response.json();
-      setNotice(watchNotice, "Auto-record is active. Recording will start automatically when the live becomes available.", "success");
+      setNotice(watchNotice, "Order placed. Capture starts by itself.", "success");
       watchForm.reset();
       await fetchWatchJobs();
     } catch (error) { setNotice(watchNotice, error.message, "error"); }
@@ -123,20 +150,23 @@ function initWatchPage() {
     const watchId = button.dataset.id;
     button.disabled = true;
     try {
-      const response = await fetch(action === "stop" ? appPath(`/watch-recordings/${watchId}/stop`) : appPath(`/watch-recordings/${watchId}`), { method: action === "stop" ? "POST" : "DELETE" });
-      if (!response.ok) throw new Error(await readApiError(response, "The action could not be completed."));
+      const path = action === "stop" ? `/watch-recordings/${watchId}/stop` : `/watch-recordings/${watchId}`;
+      const response = await apiFetch(path, { method: action === "stop" ? "POST" : "DELETE" });
+      if (!response.ok) throw new Error(await readApiError(response, "That didn't go through."));
       await response.json();
-      setNotice(watchNotice, "Watch list updated.", "success");
+      setNotice(watchNotice, "Order updated.", "success");
       await fetchWatchJobs();
     } catch (error) { setNotice(watchNotice, error.message, "error"); }
     finally { button.disabled = false; }
   }
 
   watchForm.addEventListener("submit", submitWatch);
-  clearWatchFormButton.addEventListener("click", () => { watchForm.reset(); setNotice(watchNotice, "Watch form cleared."); });
+  clearWatchFormButton.addEventListener("click", () => { watchForm.reset(); setNotice(watchNotice, "Cleared."); });
   refreshWatchListButton.addEventListener("click", () => { fetchWatchJobs().catch((error) => setNotice(watchNotice, error.message, "error")); });
   watchContainer.addEventListener("click", handleWatchAction);
 
   hydrateFromQuery();
-  fetchWatchJobs().catch((error) => setNotice(watchNotice, error.message, "error"));
+  // The server checks each order every 45s, so 10s is as live as this gets.
+  window.setInterval(pollOnce, 10000);
+  pollOnce();
 }

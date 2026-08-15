@@ -1,13 +1,13 @@
 <section class="session-section">
   <h3>TikTok session</h3>
-  <p class="muted">Only needed when a private or restricted live requires your TikTok session.</p>
+  <p class="muted">For private and age-restricted lives.</p>
 
   <div class="steps {{ '' if browser_login_status.browser_launch_supported else 'is-hidden' }}">
     <div class="step">
       <span class="step-num">1</span>
       <div class="step-body">
         <h3>Open a login browser</h3>
-        <p>Open a clean Chrome or Edge window for TikTok sign-in.</p>
+        <p>A clean window for TikTok sign-in.</p>
         <div class="row">
           <button class="btn btn-sm" type="button" id="login-chrome">Open Chrome</button>
           <button class="btn btn-sm btn-quiet" type="button" id="login-edge">Open Edge</button>
@@ -18,7 +18,7 @@
       <span class="step-num">2</span>
       <div class="step-body">
         <h3>Sign in, then close it</h3>
-        <p>Finish the TikTok sign-in flow, then close that window so the session can be saved safely.</p>
+        <p>Sign in, then close the window so the session can be saved safely.</p>
         <div class="row">
           <button class="btn btn-sm btn-danger" type="button" id="close-login">Close login browser</button>
         </div>
@@ -28,7 +28,7 @@
       <span class="step-num">3</span>
       <div class="step-body">
         <h3>Capture the session</h3>
-        <p>Save the signed-in TikTok session for private or follower-only lives.</p>
+        <p>Save the signed-in session.</p>
         <div class="row">
           <button class="btn btn-sm" type="button" id="capture-login">Capture session</button>
         </div>
