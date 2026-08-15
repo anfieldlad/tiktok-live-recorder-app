@@ -23,8 +23,11 @@
   --ink-2:#a8342a;
 
   /* stamps */
-  --filed:#3f6b4a; --pending:#8a6a1f; --failed:#8f2c22;
-  --danger:#8f2c22; --success:#3f6b4a; --warn:#8a6a1f;
+  /* --pending carries the Queued/Working stamp — the one on screen while
+     anything is happening. It was #8a6a1f, 4.75:1 on card: passing, but
+     with almost no room. This is 5.68. */
+  --filed:#3f6b4a; --pending:#78601a; --failed:#8f2c22;
+  --danger:#8f2c22; --success:#3f6b4a; --warn:#78601a;
 
   /* faces */
   --font-display:"Fraunces",Georgia,serif;
