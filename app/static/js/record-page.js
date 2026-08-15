@@ -146,7 +146,7 @@ function initRecordPage() {
   }
 
   async function fetchRecordings() {
-    const response = await fetch(appPath("/recordings"));
+    const response = await apiFetch("/recordings");
     if (!response.ok) throw new Error(`Failed to load recordings: ${response.status}`);
     renderJobs(await response.json());
   }
@@ -163,7 +163,7 @@ function initRecordPage() {
     }
     setNotice(recordNotice, "Checking the account and starting the recording...");
     try {
-      const response = await fetch(appPath("/recordings"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await apiFetch("/recordings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't start the recording."));
       const body = await response.json();
       setNotice(recordNotice, `Recording started. Job ID: ${body.id}`, "success");

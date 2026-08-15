@@ -4,6 +4,33 @@ function appPath(path) {
   return `${window.appConfig.basePath || ""}${path}`;
 }
 
+const API_KEY_STORAGE = "stillhere.apiKey";
+
+function getApiKey() {
+  try { return window.localStorage.getItem(API_KEY_STORAGE) || ""; } catch { return ""; }
+}
+
+function setApiKey(value) {
+  try {
+    if (value) window.localStorage.setItem(API_KEY_STORAGE, value);
+    else window.localStorage.removeItem(API_KEY_STORAGE);
+  } catch { /* private browsing; the key just will not persist */ }
+}
+
+/**
+ * fetch(), with the key attached and the path prefixed.
+ *
+ * Everything the server gates is called through here. Media links are plain
+ * <a href> navigations, which cannot carry a header — and are deliberately
+ * left open on the server for exactly that reason.
+ */
+function apiFetch(path, init = {}) {
+  const key = getApiKey();
+  const headers = new Headers(init.headers || {});
+  if (key) headers.set("X-API-Key", key);
+  return fetch(appPath(path), { ...init, headers });
+}
+
 function setNotice(el, message, type = "") {
   el.textContent = message;
   el.className = `notice ${type}`.trim();
@@ -47,7 +74,7 @@ async function refreshStorageNote() {
   const el = document.getElementById("storage-note");
   if (!el) return;
   try {
-    const response = await fetch(appPath("/health/details"));
+    const response = await apiFetch("/health/details");
     if (!response.ok) return;
     const { storage } = await response.json();
     if (!storage) return;

@@ -153,7 +153,7 @@ function initSavePage() {
   }
 
   async function fetchDownloads() {
-    const response = await fetch(appPath("/downloads"));
+    const response = await apiFetch("/downloads");
     if (!response.ok) throw new Error(`Could not load the register: ${response.status}`);
     render(await response.json());
   }
@@ -178,7 +178,7 @@ function initSavePage() {
       return;
     }
     try {
-      const response = await fetch(appPath(`${basePathFor(platform)}?async=1`), {
+      const response = await apiFetch(`${basePathFor(platform)}?async=1`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
@@ -200,7 +200,7 @@ function initSavePage() {
     button.disabled = true;
     try {
       const base = basePathFor(button.dataset.platform);
-      const response = await fetch(appPath(`${base}/${button.dataset.id}`), { method: "DELETE" });
+      const response = await apiFetch(`${base}/${button.dataset.id}`, { method: "DELETE" });
       if (!response.ok) throw new Error(await readApiError(response, "Could not discard it."));
       setNotice(notice, "Discarded.");
       await fetchDownloads();

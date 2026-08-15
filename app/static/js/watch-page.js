@@ -84,7 +84,7 @@ function initWatchPage() {
   }
 
   async function fetchWatchJobs() {
-    const response = await fetch(appPath("/watch-recordings"));
+    const response = await apiFetch("/watch-recordings");
     if (!response.ok) throw new Error(`Failed to load watch jobs: ${response.status}`);
     renderWatchJobs(await response.json());
   }
@@ -107,7 +107,7 @@ function initWatchPage() {
     }
     setNotice(watchNotice, "Creating a watch and checking the account...");
     try {
-      const response = await fetch(appPath("/watch-recordings"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await apiFetch("/watch-recordings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) throw new Error(await readApiError(response, "Couldn't create the watch."));
       await response.json();
       setNotice(watchNotice, "Auto-record is active. Recording will start automatically when the live becomes available.", "success");
