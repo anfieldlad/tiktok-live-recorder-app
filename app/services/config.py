@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     process_stop_grace_seconds: int = 12
     live_resolve_timeout_seconds: int = 90
     max_concurrent_live_relays: int = 3
+    # One per core on a 1.9 GB box. Chosen over 3 because ffmpeg may sit behind
+    # a fetch, and this VPS has prior form for resource exhaustion.
+    max_concurrent_downloads: int = 2
 
     @property
     def is_production(self) -> bool:
