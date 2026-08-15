@@ -7,7 +7,7 @@ import unittest
 from datetime import timedelta
 from pathlib import Path
 
-from app.models.download import DownloadEntry, DownloadPlatform
+from app.models.download import DownloadEntry, DownloadPlatform, DownloadStatus
 from app.models.recording import RecordingJob, RecordingStatus, utc_now
 from app.services.cleanup_service import CleanupService
 from app.services.config import Settings
@@ -148,3 +148,85 @@ class CleanupSweepTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CleanupToleratesJobsTests(CleanupSweepTests):
+    def test_a_queued_entry_has_no_files_and_must_not_break_the_sweep(self) -> None:
+        """`Path("").resolve()` is the working directory, not nothing."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            _, _, download_store, service = self.build(root)
+            download_store.save_entry(
+                DownloadEntry(
+                    id="queued-1",
+                    platform=DownloadPlatform.tiktok_post,
+                    status=DownloadStatus.queued,
+                    url="https://www.tiktok.com/@a/video/1",
+                )
+            )
+
+            result = service.sweep()
+
+            self.assertEqual(result["expired_downloads"], 0)
+            self.assertIsNotNone(download_store.get_entry("queued-1"))
+
+    def test_a_running_download_is_never_swept_as_an_orphan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            settings, _, download_store, service = self.build(root)
+            live_dir = settings.output_dir / "posts" / "running-1"
+            live_dir.mkdir(parents=True)
+            (live_dir / "part.mp4").write_bytes(b"x")
+            self.age(live_dir / "part.mp4", 24 * 30)
+            self.age(live_dir, 24 * 30)
+            download_store.save_entry(
+                DownloadEntry(
+                    id="running-1",
+                    platform=DownloadPlatform.tiktok_post,
+                    status=DownloadStatus.running,
+                    output_dir=str(live_dir),
+                )
+            )
+
+            service.sweep()
+
+            self.assertTrue(live_dir.exists(), "work in flight is claimed, however old its files look")
+
+    def test_a_failed_entry_eventually_leaves_the_register(self) -> None:
+        """It has no files and no fetched_at, so nothing else would ever remove it."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            _, _, download_store, service = self.build(root)
+            download_store.save_entry(
+                DownloadEntry(
+                    id="failed-1",
+                    platform=DownloadPlatform.tiktok_post,
+                    status=DownloadStatus.failed,
+                    error="that post is gone",
+                    created_at=utc_now() - timedelta(hours=48),
+                    finished_at=utc_now() - timedelta(hours=48),
+                )
+            )
+
+            result = service.sweep()
+
+            self.assertEqual(result["dead_downloads"], 1)
+            self.assertIsNone(download_store.get_entry("failed-1"))
+
+    def test_a_recent_failure_stays_visible(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            _, _, download_store, service = self.build(root)
+            download_store.save_entry(
+                DownloadEntry(
+                    id="failed-2",
+                    platform=DownloadPlatform.tiktok_post,
+                    status=DownloadStatus.failed,
+                    error="that post is gone",
+                    finished_at=utc_now(),
+                )
+            )
+
+            service.sweep()
+
+            self.assertIsNotNone(download_store.get_entry("failed-2"))

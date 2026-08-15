@@ -16,6 +16,7 @@ import shutil
 import threading
 from pathlib import Path
 
+from app.models.download import DownloadStatus
 from app.services.config import Settings
 from app.services.download_store import DownloadStore
 from app.services.job_store import JobStore
@@ -73,6 +74,7 @@ class CleanupService:
     def sweep(self) -> dict[str, int]:
         result = {
             "expired_downloads": self._sweep_expired_downloads(),
+            "dead_downloads": self._sweep_dead_downloads(),
             "expired_recordings": self._sweep_expired_recordings(),
             "orphans_removed": self._sweep_orphans(),
             "logs_removed": self._sweep_logs(),
@@ -86,9 +88,32 @@ class CleanupService:
     def _sweep_expired_downloads(self) -> int:
         removed = 0
         for entry in self.download_store.list_entries():
+            # A queued or failed job has no directory. `Path("").resolve()` is
+            # the working directory, not nothing, so this guard is not cosmetic.
+            if not entry.output_dir:
+                continue
             if not self.policy.is_expired(entry.fetched_at, self.policy.fetched_hours):
                 continue
             shutil.rmtree(Path(entry.output_dir), ignore_errors=True)
+            self.download_store.delete_entry(entry.id)
+            removed += 1
+        return removed
+
+    def _sweep_dead_downloads(self) -> int:
+        """Failed jobs left nothing on disk, so no other rule reaches them.
+
+        Without this the register accumulates every dead link ever pasted: a
+        failed entry has neither files nor `fetched_at`, and both of the other
+        sweeps key off exactly those. The orphan window is the right clock — it
+        already means "how long we keep something nobody is waiting for".
+        """
+        removed = 0
+        for entry in self.download_store.list_entries():
+            if entry.status != DownloadStatus.failed or entry.files:
+                continue
+            stamped = entry.finished_at or entry.created_at
+            if not self.policy.is_expired(stamped, self.policy.orphan_hours):
+                continue
             self.download_store.delete_entry(entry.id)
             removed += 1
         return removed
@@ -140,7 +165,8 @@ class CleanupService:
                 if job.file_path:
                     claimed.add(str(Path(job.file_path).resolve()))
             for entry in self.download_store.list_entries():
-                claimed.add(str(Path(entry.output_dir).resolve()))
+                if entry.output_dir:
+                    claimed.add(str(Path(entry.output_dir).resolve()))
                 claimed.update(str(Path(path).resolve()) for path in entry.files)
         except Exception:
             logger.exception("Could not read a store; treating everything as claimed")
