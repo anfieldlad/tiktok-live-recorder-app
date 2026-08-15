@@ -1,18 +1,29 @@
 /**
- * One page for both platforms. The endpoint is chosen from the link's
- * hostname — the same rule the backend validators and the Android UrlRouter
- * already use — so the person pasting a link never has to know which app
- * they are "in".
+ * One page for both platforms, and one register for both.
+ *
+ * The endpoint is chosen from the link's hostname — the same rule the backend
+ * validators and the Android UrlRouter already use — so the person pasting a
+ * link never has to know which app they are "in".
+ *
+ * Submissions stack. The old page disabled the button for the length of a
+ * download and kept one result slot, which is where "downloads run one at a
+ * time" came from: the server never serialized anything.
  */
 function initSavePage() {
   const form = document.getElementById("post-download-form");
   const urlInput = document.getElementById("post-url");
   const notice = document.getElementById("post-download-notice");
   const resultContainer = document.getElementById("post-download-result");
-  const submitButton = document.getElementById("download-post-button");
   const clearButton = document.getElementById("clear-post-download-form");
-  let elapsedInterval = null;
-  let elapsedSeconds = 0;
+
+  const ACTIVE_POLL_MS = 2000;
+  const IDLE_POLL_MS = 10000;
+  const POLL_FAILURES_BEFORE_WARNING = 3;
+
+  let pollTimer = null;
+  let currentPollMs = null;
+  let consecutivePollFailures = 0;
+  let pollWarningShown = false;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -38,44 +49,42 @@ function initSavePage() {
     return null;
   }
 
-  const endpointFor = (platform) => (platform === "instagram" ? "/instagram/downloads" : "/downloads");
+  const basePathFor = (platform) => (platform === "instagram" ? "/instagram/downloads" : "/downloads");
   const fileName = (path) => String(path ?? "").split(/[\\/]/).pop() || "download";
+  const isInstagram = (entry) => entry.platform === "instagram";
+  const isActive = (entry) => entry.status === "queued" || entry.status === "running";
+
+  function stampFor(entry) {
+    if (entry.status === "queued") return { label: "Queued", cls: "soft" };
+    if (entry.status === "running") return { label: "Working", cls: "soft" };
+    if (entry.status === "failed") return { label: "Failed", cls: "bad" };
+    return { label: "Filed", cls: "good" };
+  }
+
+  function titleFor(entry) {
+    if (entry.status === "queued") return "Waiting for a slot";
+    if (entry.status === "running") return "Working…";
+    if (entry.status === "failed") return "Could not be filed";
+    const count = (entry.files || []).length;
+    return `${count} file${count === 1 ? "" : "s"} filed`;
+  }
+
+  function retentionNote(entry) {
+    if (!entry.fetched_at) return "";
+    const removesAt = new Date(new Date(entry.fetched_at).getTime() + 24 * 3600 * 1000);
+    const hoursLeft = Math.max(0, Math.round((removesAt - Date.now()) / 3600000));
+    return `Taken — removed in ~${hoursLeft}h`;
+  }
 
   function emptyState() {
     return `<div class="empty"><span class="empty-title">Nothing filed yet</span>
       <span>Paste a TikTok or Instagram link above.</span></div>`;
   }
 
-  function clearLoading() {
-    if (elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
-  }
-
-  function renderLoading(platform) {
-    clearLoading();
-    elapsedSeconds = 0;
-    resultContainer.innerHTML = `
-      <article class="job-card live" data-series="${platform === "instagram" ? "ig" : "tt"}">
-        <div class="job-header">
-          <div>
-            <span class="job-id">Fetching · ${escapeHtml(platform)}</span>
-            <h3 class="job-title">Working…</h3>
-          </div>
-          <span class="stamp soft">Pending</span>
-        </div>
-        <p class="job-message">Asking ${escapeHtml(platform)} for the media.
-          <span class="elapsed-counter" id="download-elapsed">0s</span></p>
-      </article>`;
-    elapsedInterval = setInterval(() => {
-      elapsedSeconds += 1;
-      const el = document.getElementById("download-elapsed");
-      if (el) el.textContent = `${elapsedSeconds}s`;
-    }, 1000);
-  }
-
-  function renderResult(download, platform) {
-    const series = platform === "instagram" ? "ig" : "tt";
-    const files = download.files || [];
-    const fileUrls = download.file_urls || [];
+  function renderCard(entry) {
+    const stamp = stampFor(entry);
+    const files = entry.files || [];
+    const fileUrls = entry.file_urls || [];
     const rows = files.map((path, index) => `
       <div class="file-row">
         <div class="file-meta">
@@ -85,24 +94,77 @@ function initSavePage() {
         <a class="btn btn-sm" href="${appPath(fileUrls[index])}">Take a copy</a>
       </div>`).join("");
 
-    const zip = download.zip_url
-      ? `<a class="btn btn-sm btn-quiet" href="${appPath(download.zip_url)}">Take all as zip</a>` : "";
+    const zip = entry.zip_url
+      ? `<a class="btn btn-sm btn-quiet" href="${appPath(entry.zip_url)}">Take all as zip</a>` : "";
+    const message = entry.status === "failed"
+      ? `<p class="job-message">${escapeHtml(entry.error || "The download failed.")}</p>`
+      : entry.status === "running"
+        ? `<p class="job-message">Asking ${isInstagram(entry) ? "Instagram" : "TikTok"} for the media.</p>`
+        : entry.status === "queued"
+          ? `<p class="job-message">Two downloads run at a time. This one starts when a slot frees.</p>`
+          : "";
+    const note = retentionNote(entry);
 
-    resultContainer.innerHTML = `
-      <article class="job-card" data-series="${series}">
+    return `
+      <article class="job-card${isActive(entry) ? " live" : ""}" data-series="${isInstagram(entry) ? "ig" : "tt"}">
         <div class="job-header">
           <div>
-            <span class="job-id">No. ${escapeHtml(download.download_id)} · ${escapeHtml(platform)}</span>
-            <h3 class="job-title">${escapeHtml(files.length)} file${files.length === 1 ? "" : "s"} filed</h3>
+            <span class="job-id">No. ${escapeHtml(entry.id)} · ${escapeHtml(isInstagram(entry) ? "instagram" : "tiktok")}</span>
+            <h3 class="job-title">${escapeHtml(titleFor(entry))}</h3>
           </div>
-          <span class="stamp good">Filed</span>
+          <span class="stamp ${stamp.cls}">${escapeHtml(stamp.label)}</span>
         </div>
-        <div class="file-list">${rows}</div>
+        ${message}
+        ${rows ? `<div class="file-list">${rows}</div>` : ""}
+        ${note ? `<p class="retention">${escapeHtml(note)}</p>` : ""}
         <div class="job-actions">${zip}
           <button class="btn btn-sm btn-danger" data-action="delete-download"
-                  data-id="${escapeHtml(download.download_id)}" data-platform="${escapeHtml(platform)}">Discard</button>
+                  data-id="${escapeHtml(entry.id)}"
+                  data-platform="${escapeHtml(isInstagram(entry) ? "instagram" : "tiktok")}">Discard</button>
         </div>
       </article>`;
+  }
+
+  function render(entries) {
+    resultContainer.innerHTML = entries.length
+      ? entries.map(renderCard).join("")
+      : emptyState();
+    setPollRate(entries.some(isActive) ? ACTIVE_POLL_MS : IDLE_POLL_MS);
+  }
+
+  // A background poll must not clobber the notice describing what the user just
+  // did: a single dropped request used to replace a real message with the
+  // browser's raw "Failed to fetch".
+  function onPollSuccess() {
+    consecutivePollFailures = 0;
+    if (pollWarningShown) {
+      pollWarningShown = false;
+      setNotice(notice, "Reconnected.");
+    }
+  }
+
+  function onPollFailure() {
+    consecutivePollFailures += 1;
+    if (consecutivePollFailures < POLL_FAILURES_BEFORE_WARNING) return;
+    pollWarningShown = true;
+    setNotice(notice, "Lost connection to the app — still retrying…", "error");
+  }
+
+  async function fetchDownloads() {
+    const response = await fetch(appPath("/downloads"));
+    if (!response.ok) throw new Error(`Failed to load the register: ${response.status}`);
+    render(await response.json());
+  }
+
+  function pollOnce() {
+    return fetchDownloads().then(onPollSuccess, onPollFailure);
+  }
+
+  function setPollRate(intervalMs) {
+    if (currentPollMs === intervalMs) return;
+    currentPollMs = intervalMs;
+    if (pollTimer) window.clearInterval(pollTimer);
+    pollTimer = window.setInterval(pollOnce, intervalMs);
   }
 
   async function submitDownload(event) {
@@ -113,48 +175,46 @@ function initSavePage() {
       setNotice(notice, "That does not look like a TikTok or Instagram link.", "error");
       return;
     }
-    submitButton.disabled = true;
-    setNotice(notice, `Fetching from ${platform}…`);
-    renderLoading(platform);
     try {
-      const response = await fetch(appPath(endpointFor(platform)), {
+      const response = await fetch(appPath(`${basePathFor(platform)}?async=1`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      if (!response.ok) throw new Error(await readApiError(response, "The download failed."));
-      const download = await response.json();
-      clearLoading();
-      renderResult(download, platform);
-      setNotice(notice, "Post filed.");
+      if (!response.ok) throw new Error(await readApiError(response, "The download could not be started."));
+      await response.json();
+      // Clear on submit so the next link can be pasted immediately.
+      urlInput.value = "";
+      setNotice(notice, "Entered in the register. Paste another if you like.");
+      await fetchDownloads();
     } catch (error) {
-      clearLoading();
-      resultContainer.innerHTML = emptyState();
       setNotice(notice, error.message, "error");
-    } finally {
-      submitButton.disabled = false;
     }
   }
 
   resultContainer.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-action='delete-download']");
     if (!button) return;
-    const base = button.dataset.platform === "instagram" ? "/instagram/downloads" : "/downloads";
+    button.disabled = true;
     try {
+      const base = basePathFor(button.dataset.platform);
       const response = await fetch(appPath(`${base}/${button.dataset.id}`), { method: "DELETE" });
       if (!response.ok) throw new Error(await readApiError(response, "Could not discard it."));
-      resultContainer.innerHTML = emptyState();
       setNotice(notice, "Discarded from the server.");
+      await fetchDownloads();
     } catch (error) {
+      button.disabled = false;
       setNotice(notice, error.message, "error");
     }
   });
 
   form.addEventListener("submit", submitDownload);
   clearButton.addEventListener("click", () => {
-    clearLoading();
-    form.reset(); resultContainer.innerHTML = emptyState();
+    form.reset();
     setNotice(notice, "Cleared.");
   });
+
   resultContainer.innerHTML = emptyState();
+  setPollRate(IDLE_POLL_MS);
+  pollOnce();
 }

@@ -4,7 +4,7 @@
 <section class="sheet rise d1">
   <div class="eyebrow">Entry — saved post</div>
   <h1>Save a post<br>before it’s gone</h1>
-  <p class="lede">Paste a TikTok or Instagram link. The register works out which is which and files the media here until you take it.</p>
+  <p class="lede">Paste a TikTok or Instagram link. The register works out which is which and files the media here until you take it. Paste as many as you like — two are fetched at a time and the rest wait their turn.</p>
 
   <form id="post-download-form" class="form">
     <div class="field">
@@ -24,6 +24,6 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=1' }}"></script>
+<script src="{{ (base_path or '') ~ '/static/js/save-page.js?v=2' }}"></script>
 <script>initSavePage();</script>
 {% endblock %}
