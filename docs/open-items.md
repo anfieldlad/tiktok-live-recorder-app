@@ -3,9 +3,11 @@
 Everything left over from the concurrent-downloads and API-key work, in the
 order it should be picked up. Written 2026-08-16.
 
-**State of play:** branch `feat/concurrent-downloads-and-api-key`, 18 commits
-ahead of `main`, **not pushed and not deployed**. Production is still running
-the previous revision. Nothing below has happened on the VPS.
+**State of play:** branch `feat/concurrent-downloads-and-api-key`, 19 commits
+ahead of `main`, **pushed to origin, not deployed**. PR not yet opened:
+https://github.com/anfieldlad/tiktok-live-recorder-app/pull/new/feat/concurrent-downloads-and-api-key
+Production is still running the previous revision. Nothing below has happened
+on the VPS.
 
 Companion doc: `../../tiktok-live-recorder-android/docs/open-items.md`. The two
 repos are coupled — three items here cannot be closed until the Android app
@@ -135,7 +137,7 @@ argument, which is a vendor patch.
 - **`app/templates/_session_scripts.html` is dead.** Nothing includes it; it is
   a leftover from before `session-panel.js` existed, and it still contains the
   pre-redesign `sessionPill` markup. Delete it.
-- **Ship the branch.** 18 commits, unpushed, no upstream set.
+- ~~Ship the branch.~~ Done — pushed 2026-08-16, 19 commits. Open the PR when ready.
 - **Out of scope by decision**, from the two specs: batch multi-URL paste,
   download prioritisation, retry-on-failure, per-download progress percentages,
   rate limiting, disk quotas, gating deletes, multi-user accounts, key rotation,
