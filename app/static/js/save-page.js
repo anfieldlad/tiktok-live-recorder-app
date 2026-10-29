@@ -77,7 +77,7 @@ function initSavePage() {
     if (!entry.fetched_at) return "";
     const removesAt = new Date(new Date(entry.fetched_at).getTime() + 24 * 3600 * 1000);
     const hoursLeft = Math.max(0, Math.round((removesAt - Date.now()) / 3600000));
-    return `Taken — removed in ~${hoursLeft}h`;
+    return `Downloaded — removed in ~${hoursLeft}h`;
   }
 
   function emptyState() {
@@ -95,11 +95,11 @@ function initSavePage() {
           <span class="file-name">${escapeHtml(fileName(path))}</span>
           <span class="file-path">${escapeHtml(path)}</span>
         </div>
-        <a class="btn btn-sm" href="${appPath(fileUrls[index])}">Take a copy</a>
+        <a class="btn btn-sm" href="${appPath(fileUrls[index])}">Download</a>
       </div>`).join("");
 
     const zip = entry.zip_url
-      ? `<a class="btn btn-sm btn-quiet" href="${appPath(entry.zip_url)}">Take all as zip</a>` : "";
+      ? `<a class="btn btn-sm btn-quiet" href="${appPath(entry.zip_url)}">Download all (.zip)</a>` : "";
     // Only a failure needs words. Queued and working are what the stamp says,
     // and how many downloads run at once is not the reader's problem.
     const message = entry.status === "failed"
