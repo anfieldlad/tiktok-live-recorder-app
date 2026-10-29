@@ -51,6 +51,11 @@ function initSavePage() {
 
   const basePathFor = (platform) => (platform === "instagram" ? "/instagram/downloads" : "/downloads");
   const fileName = (path) => String(path ?? "").split(/[\\/]/).pop() || "download";
+  // Mirrors app/services/media_preview.py: anything else gets no thumbnail,
+  // because the server will not serve it inline.
+  const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+  const VIDEO_EXTENSIONS = new Set(["mp4", "m4v", "mov", "webm"]);
+  const extensionOf = (path) => fileName(path).split(".").pop().toLowerCase();
   // Ids are "<timestamp>-<hex>"; the hex is the distinguishing part and
   // reads as a register number. The whole id is a mouthful on a card.
   const registerNumber = (id) => String(id ?? "").split("-").pop().toUpperCase();
@@ -85,12 +90,32 @@ function initSavePage() {
       <span>Paste a link above.</span></div>`;
   }
 
+  // A preview, not a download: the server shows it inline and does not stamp
+  // the entry as fetched, so looking does not start the removal clock.
+  function thumbnailFor(path, fileUrl) {
+    if (!fileUrl) return "";
+    const src = appPath(`${fileUrl}/preview`);
+    const ext = extensionOf(path);
+    let media = "";
+    if (IMAGE_EXTENSIONS.has(ext)) {
+      media = `<img src="${escapeHtml(src)}" alt="" loading="lazy">`;
+    } else if (VIDEO_EXTENSIONS.has(ext)) {
+      // #t= asks for a frame just past the start; the very first is often black.
+      media = `<video src="${escapeHtml(src)}#t=0.1" preload="metadata" muted playsinline></video>
+          <span class="file-thumb-play" aria-hidden="true">&#9654;</span>`;
+    }
+    if (!media) return "";
+    return `<a class="file-thumb" href="${escapeHtml(src)}" target="_blank" rel="noopener"
+         aria-label="Open ${escapeHtml(fileName(path))}">${media}</a>`;
+  }
+
   function renderCard(entry) {
     const stamp = stampFor(entry);
     const files = entry.files || [];
     const fileUrls = entry.file_urls || [];
     const rows = files.map((path, index) => `
       <div class="file-row">
+        ${thumbnailFor(path, fileUrls[index])}
         <div class="file-meta">
           <span class="file-name">${escapeHtml(fileName(path))}</span>
           <span class="file-path">${escapeHtml(path)}</span>
@@ -127,10 +152,16 @@ function initSavePage() {
       </article>`;
   }
 
+  // Polling would otherwise rebuild every card each tick, and a rebuilt
+  // <video> reloads and flickers. Only touch the DOM when something changed.
+  let renderedHtml = null;
+
   function render(entries) {
-    resultContainer.innerHTML = entries.length
-      ? entries.map(renderCard).join("")
-      : emptyState();
+    const html = entries.length ? entries.map(renderCard).join("") : emptyState();
+    if (html !== renderedHtml) {
+      resultContainer.innerHTML = html;
+      renderedHtml = html;
+    }
     setPollRate(entries.some(isActive) ? ACTIVE_POLL_MS : IDLE_POLL_MS);
   }
 

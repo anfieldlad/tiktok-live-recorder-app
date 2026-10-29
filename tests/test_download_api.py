@@ -137,6 +137,72 @@ class DownloadApiTests(unittest.TestCase):
         self.assertEqual(body[0]["file_urls"], ["/downloads/20260815-101500-cccccc/files/0"])
 
 
+    def save_instagram_file(self, name: str, download_id: str = "20260815-101500-dddddd") -> None:
+        output_dir = Path(self.temp_dir.name) / "output" / download_id
+        output_dir.mkdir(parents=True)
+        media = output_dir / name
+        media.write_bytes(b"x")
+        self.app.state.download_store.save_entry(
+            DownloadEntry(
+                id=download_id,
+                platform=DownloadPlatform.instagram,
+                status=DownloadStatus.finished,
+                output_dir=str(output_dir),
+                files=[str(media)],
+            )
+        )
+
+    def test_a_preview_shows_the_image_inline(self) -> None:
+        client = self.create_test_client()
+        self.save_instagram_file("story.jpg")
+
+        response = client.get("/instagram/downloads/20260815-101500-dddddd/files/0/preview")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "image/jpeg")
+        self.assertNotIn("attachment", response.headers.get("content-disposition", ""))
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+
+    def test_a_preview_does_not_start_the_removal_clock(self) -> None:
+        """Only taking the file counts as fetched; looking at it must not."""
+        client = self.create_test_client()
+        self.save_instagram_file("story.jpg")
+
+        client.get("/instagram/downloads/20260815-101500-dddddd/files/0/preview")
+
+        entry = self.app.state.download_store.get_entry("20260815-101500-dddddd")
+        self.assertIsNone(entry.fetched_at)
+
+    def test_a_file_that_is_not_plain_media_gets_no_preview(self) -> None:
+        """Served inline, an .html or .svg would run on this origin."""
+        client = self.create_test_client()
+        self.save_instagram_file("page.html")
+
+        response = client.get("/instagram/downloads/20260815-101500-dddddd/files/0/preview")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_a_tiktok_file_has_a_preview_too(self) -> None:
+        client = self.create_test_client()
+        output_dir = Path(self.temp_dir.name) / "output" / "20260815-101500-eeeeee"
+        output_dir.mkdir(parents=True)
+        media = output_dir / "video.mp4"
+        media.write_bytes(b"x")
+        self.app.state.download_store.save_entry(
+            DownloadEntry(
+                id="20260815-101500-eeeeee",
+                platform=DownloadPlatform.tiktok_post,
+                status=DownloadStatus.finished,
+                output_dir=str(output_dir),
+                files=[str(media)],
+            )
+        )
+
+        response = client.get("/downloads/20260815-101500-eeeeee/files/0/preview")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "video/mp4")
+
 class SynchronousDoorContractTests(DownloadApiTests):
     """Android's DownloadResponse defaults every field, so a shape regression
     shows as zero files rather than an error. Assert the payload, not the 200."""

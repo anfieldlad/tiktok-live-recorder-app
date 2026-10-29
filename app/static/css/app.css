@@ -145,7 +145,7 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
   .job-actions { flex-direction: column; align-items: stretch; }
   .job-actions .btn { width: 100%; text-align: center; }
 
-  /* File row: stack filename above the take-a-copy button */
+  /* File row: stack thumbnail and filename above the download button */
   .file-row { flex-direction: column; align-items: flex-start; gap: 8px; }
   .file-row .btn { margin-left: 0; width: 100%; text-align: center; }
 }
@@ -302,6 +302,11 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
 .file-list{margin-top:14px;border-top:1px solid var(--rule)}
 .file-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px dashed var(--rule)}
 .file-meta{min-width:0}
+.file-thumb{position:relative;flex:none;display:block;width:72px;height:90px;overflow:hidden;
+  border:1px solid var(--rule);background:var(--rule)}
+.file-thumb img,.file-thumb video{display:block;width:100%;height:100%;object-fit:cover}
+.file-thumb-play{position:absolute;inset:0;display:grid;place-items:center;font-size:18px;
+  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none}
 .file-name{display:block;font:400 14px/1.3 var(--font-mono);overflow-wrap:anywhere}
 .file-path{display:block;font:400 10px/1.4 var(--font-mono);color:var(--dim);overflow-wrap:anywhere}
 .file-row .btn{margin-left:auto;flex:none}

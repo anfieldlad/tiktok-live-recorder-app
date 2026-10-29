@@ -17,6 +17,7 @@ from app.models.download import (
     DownloadStatus,
     display_path,
 )
+from app.services.media_preview import PREVIEW_HEADERS, preview_media_type
 
 
 router = APIRouter(prefix="/instagram/downloads", tags=["instagram-downloads"])
@@ -91,6 +92,24 @@ def download_file(request: Request, download_id: str, file_index: int) -> FileRe
         media_type="application/octet-stream",
         background=BackgroundTask(request.app.state.download_store.mark_fetched, download_id),
     )
+
+
+@router.get("/{download_id}/files/{file_index}/preview")
+def preview_file(request: Request, download_id: str, file_index: int) -> FileResponse:
+    """The same file, shown inline for a thumbnail. Unlike a download it does
+    not stamp the entry as fetched, so looking does not start the removal clock."""
+    instagram_download_service = request.app.state.instagram_download_service
+    try:
+        file_path = instagram_download_service.resolve_file(download_id, file_index)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    media_type = preview_media_type(file_path)
+    if media_type is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no preview for this file")
+    return FileResponse(path=file_path, media_type=media_type, headers=PREVIEW_HEADERS)
 
 
 @router.get("/{download_id}/zip")
