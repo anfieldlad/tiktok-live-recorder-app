@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from app.instagram.services.instagram_cookie_service import InstagramCookieService
 from app.instagram.services.instagram_download_service import InstagramDownloadService
@@ -196,3 +197,22 @@ class CookielessFetchTests(unittest.TestCase):
         from app.services.live_status_service import _ROOM_LOOKUP_SCRIPT
 
         self.assertIn('payload.get("use_session", True)', _ROOM_LOOKUP_SCRIPT)
+
+
+class InstagramStoryLinkTests(unittest.TestCase):
+    def test_a_story_link_with_an_id_saves_only_that_story(self) -> None:
+        """yt-dlp reads /stories/USER/ID/ as the whole tray unless told not to."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = InstagramDownloadService(Path(temp_dir) / "output")
+            completed = mock.Mock(returncode=0, stdout="", stderr="")
+            with mock.patch(
+                "app.instagram.services.instagram_download_service.subprocess.run",
+                return_value=completed,
+            ) as run:
+                service._run_yt_dlp(
+                    "https://www.instagram.com/stories/someone/3512345678901234567/",
+                    Path(temp_dir),
+                    None,
+                )
+
+            self.assertIn("--no-playlist", run.call_args.args[0])

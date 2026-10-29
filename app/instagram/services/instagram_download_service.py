@@ -184,6 +184,10 @@ class InstagramDownloadService:
             "yt_dlp",
             "--check-formats",
             "--rm-cache-dir",
+            # A story link that names one story should save that story. Without
+            # this yt-dlp treats it as a playlist and pulls every story the
+            # account has up. Links without an ID still fetch them all.
+            "--no-playlist",
             "--impersonate",
             "chrome",
             "--add-header",
